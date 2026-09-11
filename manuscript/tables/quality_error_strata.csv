@@ -1,0 +1,10 @@
+model_name,quality_strata,sample_count,mean_blur_laplacian,mean_michelson_contrast,mean_confidence,positive_detections,mean_detected_objects
+MalariaScreener_Sudan,Low,144.0,7.0,0.9452,0.678,104.0,0.72
+MalariaScreener_Sudan,Medium,144.0,11.19,0.9562,0.6672,99.0,0.69
+MalariaScreener_Sudan,High,144.0,24.3,0.9602,0.6204,91.0,0.63
+MalariaScreener_Thick,Low,144.0,7.0,0.9452,0.6573,99.0,0.69
+MalariaScreener_Thick,Medium,144.0,11.19,0.9562,0.6796,99.0,0.69
+MalariaScreener_Thick,High,144.0,24.3,0.9602,0.6769,99.0,0.69
+MalariaScreener_Thin,Low,144.0,7.0,0.9452,0.6759,100.0,0.69
+MalariaScreener_Thin,Medium,144.0,11.19,0.9562,0.756,110.0,0.76
+MalariaScreener_Thin,High,144.0,24.3,0.9602,0.8064,117.0,0.81

@@ -4,7 +4,7 @@ Translates zero-shot performance drop and error patterns into clinical risk scor
 and minimum evidence thresholds for Ghanaian healthcare deployment.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Union
 
 
 class DeploymentSafetyEvaluator:
