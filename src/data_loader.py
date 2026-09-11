@@ -1,6 +1,7 @@
 """
 Dataset loader and parser for the Ghanaian subset of the Lacuna Malaria Dataset.
 Source: Princess Marie Louise Hospital, Accra, Ghana (minoHealth AI Labs collection).
+Datasheet Reference: Gebru et al. (2021) / minoHealth AI Labs (2024).
 """
 
 import os
@@ -8,17 +9,26 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
-import cv2
 import numpy as np
 
 
 class LacunaGhanaDataset:
     """Parser and PyTorch/TF adapter for Lacuna Ghana blood smear images."""
 
-    THIN_CLASSES = ["gametocyte", "trophozoite", "ring", "white_blood_cell", "artifact"]
-    THICK_CLASSES = ["parasite", "white_blood_cell"]
+    # Confirmed exact class names from minoHealth AI Labs Data Sheet
+    THIN_CLASSES = [
+        "Gametocytes", 
+        "Trophozoites", 
+        "Ring stage", 
+        "White Blood Cells", 
+        "Artifacts"
+    ]
+    THICK_CLASSES = [
+        "Parasite", 
+        "White Blood Cells"
+    ]
 
-    def __init__(self, data_root: str, smear_type: str = "thin"):
+    def __init__(self, data_root: str, smear_type: str = "thick"):
         """
         Args:
             data_root: Path to raw dataset root (e.g. data/raw)
@@ -30,6 +40,7 @@ class LacunaGhanaDataset:
             raise ValueError("smear_type must be either 'thin' or 'thick'")
             
         self.img_dir = self.data_root / f"{self.smear_type}_smear"
+        self.target_classes = self.THICK_CLASSES if self.smear_type == "thick" else self.THIN_CLASSES
         self.annotations = self._load_annotation_index()
 
     def _load_annotation_index(self) -> List[Dict]:
