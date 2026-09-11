@@ -1,0 +1,39 @@
+# Data directories (raw datasets and heavy downloads)
+data/raw/
+data/processed/
+data/quality_metrics/
+
+# Model weights & downloaded binaries
+models/weights/
+*.pt
+*.pth
+*.tflite
+*.pb
+*.h5
+*.onnx
+
+# Python virtual environment & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# LaTeX build outputs
+manuscript/*.aux
+manuscript/*.log
+manuscript/*.out
+manuscript/*.pdf
+manuscript/*.synctex.gz
+manuscript/*.bbl
+manuscript/*.blg
+manuscript/*.fdb_latexmk
+manuscript/*.fls
