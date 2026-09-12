@@ -5,8 +5,28 @@ and object detection metrics (mAP@0.5, mAP@[0.5:0.95]).
 """
 
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from sklearn.metrics import recall_score, precision_score, f1_score, roc_auc_score, confusion_matrix
+
+
+def wilson_score_interval(successes: int, trials: int, confidence: float = 0.95) -> Tuple[float, float]:
+    """Computes Wilson score 95% confidence interval for a proportion."""
+    if trials == 0:
+        return 0.0, 0.0
+    z = 1.95996  # 95% CI
+    p = successes / trials
+    denominator = 1 + (z**2) / trials
+    centre = (p + (z**2) / (2 * trials)) / denominator
+    spread = (z * np.sqrt((p * (1 - p) + (z**2) / (4 * trials)) / trials)) / denominator
+    lower = max(0.0, centre - spread)
+    upper = min(1.0, centre + spread)
+    return float(lower), float(upper)
+
+
+def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, y_prob: Optional[np.ndarray] = None) -> Dict[str, float]:
+    """Helper wrapper around ClassificationMetrics.compute_binary_metrics."""
+    return ClassificationMetrics.compute_binary_metrics(y_true, y_pred, y_prob)
+
 
 
 class ClassificationMetrics:

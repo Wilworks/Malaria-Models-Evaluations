@@ -1,0 +1,44 @@
+{
+  "status": "SUCCESS",
+  "timestamp": "2026-09-12T09:55:32Z",
+  "total_elapsed_seconds": 279.33,
+  "metrics_identical": true,
+  "hashes_identical": true,
+  "artifacts_verified": [
+    "predictions_manifest.csv",
+    "table1_master_diagnostic_performance.csv",
+    "table3_quality_stratified_sensitivity.csv"
+  ],
+  "run_checksums": [
+    {
+      "run_id": 1,
+      "timestamp": "2026-09-12T09:52:48Z",
+      "elapsed_seconds": 115.15,
+      "checksums": {
+        "predictions_manifest.csv": "f22891c19e79838323239b93e262ad62817b3285ae6c5648492ad043ce348b3f",
+        "table1_master_diagnostic_performance.csv": "5b1eb94518be778bc6168f75d59cbc0094c5051c50cf3562846d743103d7a8dd",
+        "table3_quality_stratified_sensitivity.csv": "4638f9f6fde15752f23282f202d4f6ab931f2f03f5516ab6b3c92e6667c7f265"
+      }
+    },
+    {
+      "run_id": 2,
+      "timestamp": "2026-09-12T09:54:09Z",
+      "elapsed_seconds": 81.14,
+      "checksums": {
+        "predictions_manifest.csv": "f22891c19e79838323239b93e262ad62817b3285ae6c5648492ad043ce348b3f",
+        "table1_master_diagnostic_performance.csv": "5b1eb94518be778bc6168f75d59cbc0094c5051c50cf3562846d743103d7a8dd",
+        "table3_quality_stratified_sensitivity.csv": "4638f9f6fde15752f23282f202d4f6ab931f2f03f5516ab6b3c92e6667c7f265"
+      }
+    },
+    {
+      "run_id": 3,
+      "timestamp": "2026-09-12T09:55:32Z",
+      "elapsed_seconds": 82.59,
+      "checksums": {
+        "predictions_manifest.csv": "f22891c19e79838323239b93e262ad62817b3285ae6c5648492ad043ce348b3f",
+        "table1_master_diagnostic_performance.csv": "5b1eb94518be778bc6168f75d59cbc0094c5051c50cf3562846d743103d7a8dd",
+        "table3_quality_stratified_sensitivity.csv": "4638f9f6fde15752f23282f202d4f6ab931f2f03f5516ab6b3c92e6667c7f265"
+      }
+    }
+  ]
+}

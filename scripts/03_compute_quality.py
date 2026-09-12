@@ -22,16 +22,28 @@ def compute_quality_strata():
     out_dir = root_dir / "data" / "quality_metrics"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    assessor = ImageQualityAssessor()
+    out_csv = out_dir / "quality_manifest.csv"
+    out_json = out_dir / "quality_manifest.json"
+
     results = []
+    existing_keys = set()
+    if out_csv.exists():
+        existing_df = pd.read_csv(out_csv)
+        results = existing_df.to_dict(orient="records")
+        for r in results:
+            existing_keys.add((str(r["image_id"]), str(r["smear_type"])))
+        print(f"Loaded {len(results)} existing quality records from {out_csv.name}.")
 
-    print("=== Script 03: Computing Image Quality Strata ===")
+    assessor = ImageQualityAssessor()
+    print("=== Script 03: Computing Image Quality Strata (Incremental) ===")
 
-    for smear in ["thin", "thick"]:
+    new_count = 0
+    for smear in ["thick", "thin"]:
         ds = LacunaGhanaDataset(str(data_raw), smear_type=smear)
-        print(f"Processing {len(ds)} {smear} smear images...")
+        pending = [item for item in ds.annotations if (str(item["image_id"]), smear) not in existing_keys]
+        print(f"Found {len(pending)} unassessed {smear} smear images (out of {len(ds)} total).")
         
-        for item in tqdm(ds.annotations, desc=f"{smear.capitalize()} Smears"):
+        for item in tqdm(pending, desc=f"{smear.capitalize()} Smears"):
             img_path = item["image_path"]
             try:
                 metrics = assessor.assess_image(img_path)
@@ -41,19 +53,19 @@ def compute_quality_strata():
                     "image_path": img_path
                 })
                 results.append(metrics)
+                new_count += 1
             except Exception as e:
                 print(f"[Warning] Could not process {img_path}: {e}")
 
     df = pd.DataFrame(results)
-    out_csv = out_dir / "quality_manifest.csv"
-    out_json = out_dir / "quality_manifest.json"
-
     df.to_csv(out_csv, index=False)
     with open(out_json, "w") as f:
         json.dump(results, f, indent=2)
 
-    print(f"\n[Success] Quality metrics saved to:\n  - {out_csv}\n  - {out_json}")
+    print(f"\n[Success] Processed {new_count} new images. Total quality metrics in manifest: {len(df)}")
+    print(f"Saved to:\n  - {out_csv}\n  - {out_json}")
 
 
 if __name__ == "__main__":
     compute_quality_strata()
+
