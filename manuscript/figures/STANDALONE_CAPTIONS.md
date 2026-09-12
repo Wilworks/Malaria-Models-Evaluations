@@ -44,3 +44,8 @@
 * **File Location**: `figures/03_thin_smears/fig_thin_quality_sensitivity_lines.[png|pdf|svg]`
 * **Caption**:  
   **Figure 6 | Optical Blur Robustness on Thin Blood Smears across Focus Quality Strata.** Diagnostic sensitivity across focus blur tertiles on the Ghanaian thin-smear cohort ($n=1,011$). Demonstrates differential sensitivity collapse under optical blurring when individual red blood cell borders and intracellular ring-stage trophozoites lose morphological definition.
+
+### Figure 7: Five-Panel Cross-Model Visual Comparison on a Ghanaian Thin Smear
+* **File Location**: `figures/03_thin_smears/fig_thin_crossmodel_panel.[png|pdf|svg]`
+* **Caption**:  
+  **Figure 7 | Multi-Model Diagnostic Field Inspection on a Representative Ghanaian Thin Blood Smear Micrograph.** Multi-panel comparison demonstrating model inference behavior on a Giemsa-stained thin blood smear monolayer (Slide ID: 112; 23 verified ground truth annotations: 22 *Plasmodium* parasites and 1 leukocyte). Panel 1 displays expert ground truth annotations by minoHealth AI Labs microscopists (emerald bounding boxes denote confirmed parasites; royal violet denotes leukocytes). Panels 2–4 illustrate whole-slide binary classifications from the three NIH MalariaScreener MobileNetV2 models (Sudan, Thick, and Thin) with floating status badges showing slide-level confidence; these models produce no spatial bounding boxes. Panel 5 displays spatial object detections from the YOLOv8 detector with class-specific bounding boxes and detection counts (5 parasites, 1 leukocyte).

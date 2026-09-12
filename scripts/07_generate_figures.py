@@ -371,7 +371,9 @@ def fig_crossmodel_5panel(df, gt_map, smear_type="thick", out_dir=DIR_THICK):
                 sample_id = cid
                 break
     else:
-        candidate_ids = ["5", "1067", "1139"]
+        # Micrograph 112: Centered circular field, 23 verified annotations (22 parasites, 1 WBC),
+        # sharp focus, balanced Giemsa staining, and high-quality YOLO spatial detections
+        candidate_ids = ["112", "1035", "939", "1205"]
         sample_id = None
         for cid in candidate_ids:
             if cid in sub["image_id"].astype(str).values:
@@ -405,42 +407,73 @@ def fig_crossmodel_5panel(df, gt_map, smear_type="thick", out_dir=DIR_THICK):
             if len(p) >= 5:
                 gt_boxes.append((int(float(p[0])), float(p[1]), float(p[2]), float(p[3]), float(p[4])))
 
-    fig, axes = plt.subplots(1, 5, figsize=(22, 4.8))
+    # Cinematic tight filmstrip layout: dynamically match image aspect ratio (w/h)
+    # This completely eliminates dead whitespace gaps between models
+    aspect = w / h
+    panel_h = 5.2
+    panel_w = panel_h * aspect
+    fig_w = panel_w * 5 + 0.6
+
+    fig, axes = plt.subplots(1, 5, figsize=(fig_w, panel_h + 1.2),
+                             gridspec_kw={"wspace": 0.02, "left": 0.015, "right": 0.985, "top": 0.83, "bottom": 0.04})
     fig.patch.set_facecolor("#FFFFFF")
 
     # Panel 0: Ground Truth
     ax_gt = axes[0]
     ax_gt.set_facecolor("#FFFFFF")
     ax_gt.imshow(img_rgb)
-    n_p, n_w = 0, 0
+    n_p, n_w, n_art = 0, 0, 0
     for (cls_id, xc, yc, bw, bh) in gt_boxes:
         x1 = int((xc - bw / 2) * w)
         y1 = int((yc - bh / 2) * h)
-        # Class identification: 0 is parasite, 1 is WBC (thick); {0,1,2,5} parasite, 3 WBC (thin)
-        is_parasite = (cls_id == 0) if smear_type == "thick" else (cls_id in {0, 1, 2, 5})
-        if is_parasite:
-            color = "#10B981"  # Emerald Green for Parasite
-            lw = 0.75
-            n_p += 1
+        if smear_type == "thick":
+            is_p = (cls_id == 0)
+            is_w = (cls_id == 1)
+            is_art = False
         else:
+            is_p = (cls_id in {0, 1, 2, 5})
+            is_w = (cls_id == 3)
+            is_art = (cls_id == 4)
+
+        if is_p:
+            color = "#10B981"  # Emerald Green for Parasite
+            lw = 0.85
+            n_p += 1
+        elif is_w:
             color = "#8B5CF6"  # Royal Violet for Leukocyte/WBC
-            lw = 1.2
+            lw = 1.3
             n_w += 1
+        else:
+            color = "#6B7280"  # Neutral Slate for Artifacts
+            lw = 0.85
+            n_art += 1
 
         rect = mpatches.Rectangle((x1, y1), int(bw * w), int(bh * h),
                                    linewidth=lw, edgecolor=color, facecolor="none")
         ax_gt.add_patch(rect)
 
     # Class Legend for GT
-    patch_p = mpatches.Patch(facecolor="#10B981", edgecolor="#059669", label=f"Parasite (n={n_p})")
-    patch_w = mpatches.Patch(facecolor="#8B5CF6", edgecolor="#7C3AED", label=f"Leukocyte/WBC (n={n_w})")
-    ax_gt.legend(handles=[patch_p, patch_w], loc="lower right", fontsize=8.0,
-                 frameon=True, facecolor="#FFFFFF", edgecolor="#E5E7EB", framealpha=0.95)
-    ax_gt.set_title(f"Ground Truth Reference\nminoHealth ({len(gt_boxes)} annotations)",
-                    fontsize=9.5, fontweight="bold", color="#111827", pad=6)
+    gt_patches = [mpatches.Patch(facecolor="#10B981", edgecolor="#059669", label=f"Parasite (n={n_p})")]
+    if n_w > 0:
+        gt_patches.append(mpatches.Patch(facecolor="#8B5CF6", edgecolor="#7C3AED", label=f"WBC (n={n_w})"))
+    if n_art > 0:
+        gt_patches.append(mpatches.Patch(facecolor="#6B7280", edgecolor="#4B5563", label=f"Artifact (n={n_art})"))
+
+    ax_gt.legend(handles=gt_patches, loc="lower right", fontsize=7.6,
+                 frameon=True, facecolor="#FFFFFF", edgecolor="#D1D5DB", framealpha=0.92,
+                 handlelength=1.2, handleheight=0.8, borderpad=0.3)
+    ax_gt.set_title(f"Ground Truth Reference\nminoHealth ({len(gt_boxes)} Verified Boxes: {n_p} Parasite, {n_w} WBC)",
+                    fontsize=8.5, fontweight="bold", color="#111827", pad=7)
     ax_gt.axis("off")
 
     # Panels 1-4: Models
+    labels = {
+        "MalariaScreener_Sudan": "MS_Sudan (NIH MobileNetV2)\nTraining: Thick Smear, Sudan",
+        "MalariaScreener_Thick": "MS_Thick (NIH MobileNetV2)\nTraining: Thick Smear, Bangladesh",
+        "MalariaScreener_Thin":  "MS_Thin (NIH MobileNetV2)\nTraining: Thin Smear, Bangladesh",
+        "fbononibelloepoch_YOLOv8": "fbononi YOLOv8 (Spatial Detector)\nMulti-Class Object Detection",
+    }
+
     for ax, m in zip(axes[1:], models):
         ax.set_facecolor("#FFFFFF")
         ax.imshow(img_rgb)
@@ -448,8 +481,13 @@ def fig_crossmodel_5panel(df, gt_map, smear_type="thick", out_dir=DIR_THICK):
         m_row = sub[(sub["image_id"].astype(str) == sample_id) & (sub["model_name"] == m)]
         conf = float(m_row.iloc[0]["confidence"]) if not m_row.empty else 0.0
         p_class = int(m_row.iloc[0]["predicted_class"]) if not m_row.empty else 0
-        pred_label = "POSITIVE" if p_class == 1 else "NEGATIVE"
-        label_color = "#047857" if p_class == 1 else "#DC2626"
+        
+        if p_class == 1:
+            status_txt = "POSITIVE"
+            badge_border = "#059669"
+        else:
+            status_txt = "NEGATIVE"
+            badge_border = "#DC2626"
 
         if m == "fbononibelloepoch_YOLOv8":
             boxes_json = m_row.iloc[0].get("boxes_json", "[]") if not m_row.empty else "[]"
@@ -469,41 +507,56 @@ def fig_crossmodel_5panel(df, gt_map, smear_type="thick", out_dir=DIR_THICK):
                             yp_count += 1
                         else:
                             b_col = "#8B5CF6"
-                            lw = 1.2
+                            lw = 1.3
                             c_name = "WBC"
                             yw_count += 1
                         rect = mpatches.Rectangle((x1, y1), x2 - x1, y2 - y1,
                                                    linewidth=lw, edgecolor=b_col, facecolor="none")
                         ax.add_patch(rect)
                         # Explicit class and confidence badge
-                        ax.text(x1, max(y1 - 12, 18), f"{c_name} {b_conf:.2f}",
-                                fontsize=6.8, fontweight="bold", color="#FFFFFF",
-                                bbox=dict(facecolor=b_col, alpha=0.92, edgecolor="none", boxstyle="round,pad=0.2"))
+                        ax.text(x1, max(y1 - 6, 12), f"{c_name} {b_conf:.2f}",
+                                fontsize=6.5, fontweight="bold", color="#FFFFFF",
+                                bbox=dict(facecolor=b_col, alpha=0.92, edgecolor="none",
+                                          boxstyle="round,pad=0.15"))
 
-                patch_yp = mpatches.Patch(facecolor="#10B981", edgecolor="#059669", label=f"Parasite (n={yp_count})")
-                patch_yw = mpatches.Patch(facecolor="#8B5CF6", edgecolor="#7C3AED", label=f"WBC (n={yw_count})")
-                ax.legend(handles=[patch_yp, patch_yw], loc="lower right", fontsize=8.0,
-                          frameon=True, facecolor="#FFFFFF", edgecolor="#E5E7EB", framealpha=0.95)
+                y_patches = []
+                if yp_count > 0:
+                    y_patches.append(mpatches.Patch(facecolor="#10B981", edgecolor="#059669", label=f"Parasite (n={yp_count})"))
+                if yw_count > 0:
+                    y_patches.append(mpatches.Patch(facecolor="#8B5CF6", edgecolor="#7C3AED", label=f"WBC (n={yw_count})"))
+                if y_patches:
+                    ax.legend(handles=y_patches, loc="lower right", fontsize=7.6,
+                              frameon=True, facecolor="#FFFFFF", edgecolor="#D1D5DB", framealpha=0.92,
+                              handlelength=1.2, handleheight=0.8, borderpad=0.3)
             except Exception as e:
-                pass
-            sub_text = f"Object Detector | {pred_label}\nConfidence: {conf:.2f}"
+                yp_count, yw_count = 0, 0
+                
+            sub_text = f"Detected Boxes: {yp_count + yw_count} ({yp_count} Parasite, {yw_count} WBC)"
+            model_head = "fbononi YOLOv8 (Spatial Detector)"
         else:
-            ax.text(0.5, 0.08, f"{pred_label} ({conf:.2f})",
-                    transform=ax.transAxes, ha="center", va="bottom",
-                    fontsize=11.0, fontweight="bold", color=label_color,
-                    bbox=dict(facecolor="#FFFFFF", alpha=0.94, edgecolor=label_color,
-                              boxstyle="round,pad=0.35"))
-            sub_text = "Image Classifier\n(Slide-level output)"
+            sub_text = "Whole-Slide Classifier (No Bounding Boxes)"
+            model_head = labels[m].split(chr(10))[0]
 
-        ax.set_title(f"{MODEL_LABELS[m].split(chr(10))[0]}\n{sub_text}",
-                     fontsize=8.8, fontweight="bold", color="#111827", pad=6)
+        # Appetite-wetting sleek glassmorphism pill badge
+        # Dark obsidian capsule with glowing colored indicator dot
+        badge_str = f"●  {status_txt}   {conf:.2f}"
+        ax.text(0.5, 0.05, badge_str,
+                transform=ax.transAxes, ha="center", va="bottom",
+                fontsize=8.4, fontweight="bold", color="#F9FAFB",
+                bbox=dict(facecolor="#0F172A", alpha=0.88, edgecolor=badge_border,
+                          linewidth=0.9, boxstyle="round,pad=0.28,rounding_size=0.6"))
+
+        ax.set_title(f"{model_head}\n{sub_text}",
+                     fontsize=8.5, fontweight="bold", color="#111827", pad=7)
         ax.axis("off")
 
-    fig.suptitle(f"Cross-Model Diagnostic Microscopy on Ghanaian {smear_type.capitalize()} Blood Smear (ID: {sample_id})\n"
-                 "Panel 1: Ground Truth Reference (minoHealth) | Panels 2-4: NIH Classifiers (Slide-Level) | Panel 5: YOLOv8 Spatial Object Detections",
-                 fontsize=10.5, fontweight="bold", color="#111827", y=1.03)
+    # Explicit clinical infection status stated in master title
+    is_infected = (gt_map.get((str(sample_id), smear_type), 0) == 1)
+    status_label = "PARASITE INFECTED (Positive Control)" if is_infected else "UNINFECTED / HEALTHY (Negative Control)"
+    fig.suptitle(f"Cross-Model Diagnostic Microscopy on Ghanaian {smear_type.capitalize()} Blood Smear (Slide ID: {sample_id}) — Ground Truth: {status_label}\n"
+                 "Panel 1: Ground Truth Reference (minoHealth) | Panels 2-4: Whole-Slide Binary Decisions | Panel 5: YOLOv8 Spatial Bounding Box Detections",
+                 fontsize=10.2, fontweight="bold", color="#111827", y=0.965)
 
-    fig.tight_layout()
     save_multi_format(fig, out_dir / f"fig_{smear_type}_crossmodel_panel")
     plt.close(fig)
 
@@ -557,6 +610,11 @@ def generate_standalone_captions_doc():
 * **File Location**: `figures/03_thin_smears/fig_thin_quality_sensitivity_lines.[png|pdf|svg]`
 * **Caption**:  
   **Figure 6 | Optical Blur Robustness on Thin Blood Smears across Focus Quality Strata.** Diagnostic sensitivity across focus blur tertiles on the Ghanaian thin-smear cohort ($n=1,011$). Demonstrates differential sensitivity collapse under optical blurring when individual red blood cell borders and intracellular ring-stage trophozoites lose morphological definition.
+
+### Figure 7: Five-Panel Cross-Model Visual Comparison on a Ghanaian Thin Smear
+* **File Location**: `figures/03_thin_smears/fig_thin_crossmodel_panel.[png|pdf|svg]`
+* **Caption**:  
+  **Figure 7 | Multi-Model Diagnostic Field Inspection on a Representative Ghanaian Thin Blood Smear Micrograph.** Multi-panel comparison demonstrating model inference behavior on a Giemsa-stained thin blood smear monolayer (Slide ID: 112; 23 verified ground truth annotations: 22 *Plasmodium* parasites and 1 leukocyte). Panel 1 displays expert ground truth annotations by minoHealth AI Labs microscopists (emerald bounding boxes denote confirmed parasites; royal violet denotes leukocytes). Panels 2–4 illustrate whole-slide binary classifications from the three NIH MalariaScreener MobileNetV2 models (Sudan, Thick, and Thin) with floating status badges showing slide-level confidence; these models produce no spatial bounding boxes. Panel 5 displays spatial object detections from the YOLOv8 detector with class-specific bounding boxes and detection counts (5 parasites, 1 leukocyte).
 """
     doc_path.write_text(content, encoding="utf-8")
     print(f"[Generated Documentation] {doc_path.relative_to(ROOT)}")
