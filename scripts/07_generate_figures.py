@@ -95,7 +95,7 @@ def set_clean_academic_style(ax, fig):
 
 
 def save_multi_format(fig, base_path: Path):
-    """Exports figure in high-resolution 300 DPI PNG (raster) and publication vector PDF."""
+    """Exports figure in high-resolution 300 DPI PNG (raster), vector PDF, and SVG."""
     import gc
     # 1. 300 DPI high-resolution raster
     png_path = base_path.with_suffix(".png")
@@ -107,6 +107,13 @@ def save_multi_format(fig, base_path: Path):
         fig.savefig(pdf_path, format="pdf", bbox_inches="tight", facecolor="#FFFFFF")
     except Exception as e:
         print(f"  [Notice] Vector PDF skipped ({e})")
+
+    # 3. Vector SVG
+    try:
+        svg_path = base_path.with_suffix(".svg")
+        fig.savefig(svg_path, format="svg", bbox_inches="tight", facecolor="#FFFFFF")
+    except Exception as e:
+        print(f"  [Notice] Vector SVG skipped ({e})")
         
     gc.collect()
     print(f"[Exported] {base_path.name}")
@@ -205,7 +212,7 @@ def fig_sensitivity_bars(df, smear_type="thick", out_dir=DIR_THICK):
         for bar, val in zip(bars2, spec_vals):
             ax.text(bar.get_x() + bar.get_width()/2, val + 1.2, f"{val:.1f}%",
                     ha="center", va="bottom", fontsize=9.0, color="#374151")
-        ax.legend(loc="lower left", frameon=True, facecolor="#FFFFFF",
+        ax.legend(loc="upper left", frameon=True, facecolor="#FFFFFF",
                   edgecolor="#E5E7EB", framealpha=0.95)
 
     # WHO 90% Threshold line
@@ -461,7 +468,7 @@ def generate_standalone_captions_doc():
 ### Figure 1: Cross-Domain × Cross-Modality Sensitivity Matrix
 * **File Location**: `figures/01_cross_modality/fig_cross_modality_heatmap.[png|pdf|svg]`
 * **Caption**:  
-  **Figure 1 | Cross-Domain and Cross-Modality Zero-Shot Performance Matrix of External Deep Learning Models on Ghanaian Blood Smears.** Heatmap illustrating diagnostic sensitivity across four candidate architectures evaluated zero-shot on blood smear micrographs collected at Princess Marie Louise Children's Hospital, Accra, Ghana. Rows denote model architectures, their training geographical provenance, and primary training smear modality: *MalariaScreener_Sudan* (NIH/LHNCBC; MobileNetV2; thick smear, Sudan), *MalariaScreener_Thick* (NIH/LHNCBC; MobileNetV2; thick smear, Chittagong, Bangladesh), *MalariaScreener_Thin* (NIH/LHNCBC; MobileNetV2; thin smear, Chittagong, Bangladesh), and *fbononibelloepoch_YOLOv8* (modern YOLOv8n object detector). Columns denote the evaluation modality: thick blood smear cohort ($n=432$) and thin blood smear cohort ($n=1,011$). Cell annotations denote true positive sensitivity (percentage of parasitized slides correctly flagged positive). Cells are shaded along a normalized colorblind-safe gradient from high sensitivity (emerald) to poor generalizability (terracotta).
+  **Figure 1 | Cross-Domain and Cross-Modality Zero-Shot Performance Matrix of External Deep Learning Models on Ghanaian Blood Smears.** Heatmap illustrating diagnostic sensitivity across four candidate architectures evaluated zero-shot on blood smear micrographs collected at Princess Marie Louise Children's Hospital, Accra, Ghana. Rows denote model architectures, their training geographical provenance, and primary training smear modality: *MalariaScreener_Sudan* (NIH/LHNCBC; MobileNetV2; thick smear, Sudan), *MalariaScreener_Thick* (NIH/LHNCBC; MobileNetV2; thick smear, Chittagong, Bangladesh), *MalariaScreener_Thin* (NIH/LHNCBC; MobileNetV2; thin smear, Chittagong, Bangladesh), and *fbononibelloepoch_YOLOv8* (modern YOLOv8n object detector). Columns denote the evaluation modality: thick blood smear cohort ($n=3,043$) and thin blood smear cohort ($n=1,011$). Cell annotations denote true positive sensitivity (percentage of parasitized slides correctly flagged positive). Cells are shaded along a normalized colorblind-safe gradient from high sensitivity (emerald) to poor generalizability (terracotta).
 
 ---
 
@@ -470,12 +477,12 @@ def generate_standalone_captions_doc():
 ### Figure 2: Zero-Shot Diagnostic Performance on Ghanaian Thick Blood Smears
 * **File Location**: `figures/02_thick_smears/fig_thick_sensitivity_comparison.[png|pdf|svg]`
 * **Caption**:  
-  **Figure 2 | Zero-Shot Diagnostic Sensitivity on Ghanaian Thick Blood Smear Micrographs ($n=432$).** Bar chart comparing the slide-level diagnostic sensitivity across all four candidate models against the World Health Organization (WHO) recommended clinical triage sensitivity threshold of 90% (dashed crimson line). Error bars denote 95% Clopper-Pearson binomial confidence intervals. Bars are styled using certified Okabe-Ito colorblind-safe palettes with distinct luminance profiles to ensure grayscale print legibility. All micrographs were captured via smartphone cameras attached to light microscopes at Princess Marie Louise Hospital, Accra.
+  **Figure 2 | Zero-Shot Diagnostic Sensitivity on Ghanaian Thick Blood Smear Micrographs ($n=3,043$).** Bar chart comparing the slide-level diagnostic sensitivity across all four candidate models against the World Health Organization (WHO) recommended clinical triage sensitivity threshold of 90% (dashed crimson line). Error bars denote 95% Clopper-Pearson binomial confidence intervals. Bars are styled using certified Okabe-Ito colorblind-safe palettes with distinct luminance profiles to ensure grayscale print legibility. All micrographs were captured via smartphone cameras attached to light microscopes at Princess Marie Louise Hospital, Accra.
 
 ### Figure 3: Focus Quality vs. Diagnostic Sensitivity on Thick Smears
 * **File Location**: `figures/02_thick_smears/fig_thick_quality_sensitivity_lines.[png|pdf|svg]`
 * **Caption**:  
-  **Figure 3 | Quality-Stratified Robustness of Thick Smear Models across Focus Degradation Tertiles.** Line plot displaying diagnostic sensitivity as a function of optical focus quality, quantified via circular ocular Field-of-View (FOV) masked Laplacian variance. Smear micrographs ($n=432$) are partitioned into tertiles: Low focus quality ($\le 9.14$), Medium focus quality ($9.14 - 15.65$), and High focus quality ($> 15.65$). Distinct geometric markers and Okabe-Ito hues denote individual models. The red dashed line denotes the WHO 90% clinical triage threshold.
+  **Figure 3 | Quality-Stratified Robustness of Thick Smear Models across Focus Degradation Tertiles.** Line plot displaying diagnostic sensitivity as a function of optical focus quality, quantified via circular ocular Field-of-View (FOV) masked Laplacian variance. Smear micrographs ($n=3,043$) are partitioned into tertiles: Low focus quality ($\le 9.14$), Medium focus quality ($9.14 - 15.65$), and High focus quality ($> 15.65$). Distinct geometric markers and Okabe-Ito hues denote individual models. The red dashed line denotes the WHO 90% clinical triage threshold.
 
 ### Figure 4: Five-Panel Cross-Model Visual Comparison on a Ghanaian Thick Smear
 * **File Location**: `figures/02_thick_smears/fig_thick_crossmodel_panel.[png|pdf|svg]`
