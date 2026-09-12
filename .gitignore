@@ -37,6 +37,7 @@ manuscript/*.bbl
 manuscript/*.blg
 manuscript/*.fdb_latexmk
 manuscript/*.fls
+manuscript/page_*.png
 
 # Local study notes & drafts (uncommitted)
 *STUDY_NOTES*.md
