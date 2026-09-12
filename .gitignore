@@ -37,3 +37,7 @@ manuscript/*.bbl
 manuscript/*.blg
 manuscript/*.fdb_latexmk
 manuscript/*.fls
+
+# Local study notes & drafts (uncommitted)
+*STUDY_NOTES*.md
+manuscript/COMPREHENSIVE_STUDY_NOTES.md
