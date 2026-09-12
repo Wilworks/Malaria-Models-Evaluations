@@ -362,11 +362,27 @@ def fig_crossmodel_5panel(df, gt_map, smear_type="thick", out_dir=DIR_THICK):
     models = ["MalariaScreener_Sudan", "MalariaScreener_Thick",
               "MalariaScreener_Thin", "fbononibelloepoch_YOLOv8"]
 
-    sample_id = None
-    for img_id, grp in sub.groupby("image_id"):
-        if grp["model_name"].nunique() >= len(models) and gt_map.get((str(img_id), smear_type), 0) == 1:
-            sample_id = str(img_id)
-            break
+    # Select representative micrograph with clean, distinguishable cellular morphology
+    if smear_type == "thick":
+        candidate_ids = ["13", "1535", "2414", "102"]
+        sample_id = None
+        for cid in candidate_ids:
+            if cid in sub["image_id"].astype(str).values:
+                sample_id = cid
+                break
+    else:
+        candidate_ids = ["5", "1067", "1139"]
+        sample_id = None
+        for cid in candidate_ids:
+            if cid in sub["image_id"].astype(str).values:
+                sample_id = cid
+                break
+
+    if not sample_id:
+        for img_id, grp in sub.groupby("image_id"):
+            if grp["model_name"].nunique() >= len(models) and gt_map.get((str(img_id), smear_type), 0) == 1:
+                sample_id = str(img_id)
+                break
 
     if not sample_id:
         return
@@ -387,24 +403,41 @@ def fig_crossmodel_5panel(df, gt_map, smear_type="thick", out_dir=DIR_THICK):
         for line in lbl_path.read_text().splitlines():
             p = line.split()
             if len(p) >= 5:
-                gt_boxes.append((float(p[1]), float(p[2]), float(p[3]), float(p[4])))
+                gt_boxes.append((int(float(p[0])), float(p[1]), float(p[2]), float(p[3]), float(p[4])))
 
-    fig, axes = plt.subplots(1, 5, figsize=(20, 4.4))
+    fig, axes = plt.subplots(1, 5, figsize=(22, 4.8))
     fig.patch.set_facecolor("#FFFFFF")
 
     # Panel 0: Ground Truth
     ax_gt = axes[0]
     ax_gt.set_facecolor("#FFFFFF")
     ax_gt.imshow(img_rgb)
-    for (xc, yc, bw, bh) in gt_boxes:
-        x1 = int((xc - bw/2) * w)
-        y1 = int((yc - bh/2) * h)
-        rect = mpatches.Rectangle((x1, y1), int(bw*w), int(bh*h),
-                                   linewidth=1.8, edgecolor="#059669",
-                                   facecolor="none")
+    n_p, n_w = 0, 0
+    for (cls_id, xc, yc, bw, bh) in gt_boxes:
+        x1 = int((xc - bw / 2) * w)
+        y1 = int((yc - bh / 2) * h)
+        # Class identification: 0 is parasite, 1 is WBC (thick); {0,1,2,5} parasite, 3 WBC (thin)
+        is_parasite = (cls_id == 0) if smear_type == "thick" else (cls_id in {0, 1, 2, 5})
+        if is_parasite:
+            color = "#10B981"  # Emerald Green for Parasite
+            lw = 0.75
+            n_p += 1
+        else:
+            color = "#8B5CF6"  # Royal Violet for Leukocyte/WBC
+            lw = 1.2
+            n_w += 1
+
+        rect = mpatches.Rectangle((x1, y1), int(bw * w), int(bh * h),
+                                   linewidth=lw, edgecolor=color, facecolor="none")
         ax_gt.add_patch(rect)
-    ax_gt.set_title(f"Ground Truth Reference\nminoHealth Annotations ({len(gt_boxes)} boxes)",
-                    fontsize=9.0, fontweight="bold", color="#047857", pad=6)
+
+    # Class Legend for GT
+    patch_p = mpatches.Patch(facecolor="#10B981", edgecolor="#059669", label=f"Parasite (n={n_p})")
+    patch_w = mpatches.Patch(facecolor="#8B5CF6", edgecolor="#7C3AED", label=f"Leukocyte/WBC (n={n_w})")
+    ax_gt.legend(handles=[patch_p, patch_w], loc="lower right", fontsize=8.0,
+                 frameon=True, facecolor="#FFFFFF", edgecolor="#E5E7EB", framealpha=0.95)
+    ax_gt.set_title(f"Ground Truth Reference\nminoHealth ({len(gt_boxes)} annotations)",
+                    fontsize=9.5, fontweight="bold", color="#111827", pad=6)
     ax_gt.axis("off")
 
     # Panels 1-4: Models
@@ -421,22 +454,44 @@ def fig_crossmodel_5panel(df, gt_map, smear_type="thick", out_dir=DIR_THICK):
         if m == "fbononibelloepoch_YOLOv8":
             boxes_json = m_row.iloc[0].get("boxes_json", "[]") if not m_row.empty else "[]"
             try:
-                for b in json.loads(boxes_json):
+                yolo_boxes = json.loads(boxes_json)
+                yp_count, yw_count = 0, 0
+                for b in yolo_boxes:
                     bbox = b.get("bbox", [])
+                    b_cls = b.get("class_id", 0)
+                    b_conf = b.get("confidence", 0.0)
                     if len(bbox) == 4:
                         x1, y1, x2, y2 = [int(v) for v in bbox]
-                        rect = mpatches.Rectangle((x1, y1), x2-x1, y2-y1,
-                                                   linewidth=1.6, edgecolor=MODEL_COLORS[m],
-                                                   facecolor="none")
+                        if b_cls == 0:
+                            b_col = "#10B981"
+                            lw = 0.85
+                            c_name = "Parasite"
+                            yp_count += 1
+                        else:
+                            b_col = "#8B5CF6"
+                            lw = 1.2
+                            c_name = "WBC"
+                            yw_count += 1
+                        rect = mpatches.Rectangle((x1, y1), x2 - x1, y2 - y1,
+                                                   linewidth=lw, edgecolor=b_col, facecolor="none")
                         ax.add_patch(rect)
-            except Exception:
+                        # Explicit class and confidence badge
+                        ax.text(x1, max(y1 - 12, 18), f"{c_name} {b_conf:.2f}",
+                                fontsize=6.8, fontweight="bold", color="#FFFFFF",
+                                bbox=dict(facecolor=b_col, alpha=0.92, edgecolor="none", boxstyle="round,pad=0.2"))
+
+                patch_yp = mpatches.Patch(facecolor="#10B981", edgecolor="#059669", label=f"Parasite (n={yp_count})")
+                patch_yw = mpatches.Patch(facecolor="#8B5CF6", edgecolor="#7C3AED", label=f"WBC (n={yw_count})")
+                ax.legend(handles=[patch_yp, patch_yw], loc="lower right", fontsize=8.0,
+                          frameon=True, facecolor="#FFFFFF", edgecolor="#E5E7EB", framealpha=0.95)
+            except Exception as e:
                 pass
             sub_text = f"Object Detector | {pred_label}\nConfidence: {conf:.2f}"
         else:
             ax.text(0.5, 0.08, f"{pred_label} ({conf:.2f})",
                     transform=ax.transAxes, ha="center", va="bottom",
                     fontsize=11.0, fontweight="bold", color=label_color,
-                    bbox=dict(facecolor="#FFFFFF", alpha=0.92, edgecolor=label_color,
+                    bbox=dict(facecolor="#FFFFFF", alpha=0.94, edgecolor=label_color,
                               boxstyle="round,pad=0.35"))
             sub_text = "Image Classifier\n(Slide-level output)"
 
@@ -445,8 +500,8 @@ def fig_crossmodel_5panel(df, gt_map, smear_type="thick", out_dir=DIR_THICK):
         ax.axis("off")
 
     fig.suptitle(f"Cross-Model Diagnostic Microscopy on Ghanaian {smear_type.capitalize()} Blood Smear (ID: {sample_id})\n"
-                 "Panel 1: Ground Truth Reference  |  Panels 2-4: NIH Classifiers (Slide-Level)  |  Panel 5: YOLOv8 Detector (Predicted Bounding Boxes)",
-                 fontsize=10.0, fontweight="bold", color="#111827", y=1.03)
+                 "Panel 1: Ground Truth Reference (minoHealth) | Panels 2-4: NIH Classifiers (Slide-Level) | Panel 5: YOLOv8 Spatial Object Detections",
+                 fontsize=10.5, fontweight="bold", color="#111827", y=1.03)
 
     fig.tight_layout()
     save_multi_format(fig, out_dir / f"fig_{smear_type}_crossmodel_panel")
