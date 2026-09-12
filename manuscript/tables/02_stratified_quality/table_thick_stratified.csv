@@ -1,0 +1,13 @@
+Model,Quality_Strata,n,TP,FN,Sensitivity,Mean_Blur
+MalariaScreener_Sudan,Low,144,104,40,0.722,7.0
+MalariaScreener_Sudan,Medium,144,99,45,0.688,11.19
+MalariaScreener_Sudan,High,144,91,53,0.632,24.3
+MalariaScreener_Thick,Low,144,99,45,0.688,7.0
+MalariaScreener_Thick,Medium,144,99,45,0.688,11.19
+MalariaScreener_Thick,High,144,99,45,0.688,24.3
+MalariaScreener_Thin,Low,144,100,44,0.694,7.0
+MalariaScreener_Thin,Medium,144,110,34,0.764,11.19
+MalariaScreener_Thin,High,144,117,27,0.812,24.3
+fbononibelloepoch_YOLOv8,Low,144,124,20,0.861,7.0
+fbononibelloepoch_YOLOv8,Medium,144,129,15,0.896,11.19
+fbononibelloepoch_YOLOv8,High,144,126,18,0.875,24.3

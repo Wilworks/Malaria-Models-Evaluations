@@ -1,0 +1,5 @@
+Model,Smear_Type,n,TP,FP,TN,FN,Sensitivity,Specificity,Precision,F1_Score,Accuracy,Mean_Confidence
+MalariaScreener_Sudan,thick,432,293,1,0,138,0.6798,0.0,0.9966,0.8083,0.6782,0.6552
+MalariaScreener_Thick,thick,432,296,1,0,135,0.6868,0.0,0.9966,0.8132,0.6852,0.6712
+MalariaScreener_Thin,thick,432,327,0,1,104,0.7587,1.0,1.0,0.8628,0.7593,0.7461
+fbononibelloepoch_YOLOv8,thick,432,378,1,0,53,0.877,0.0,0.9974,0.9333,0.875,0.5907

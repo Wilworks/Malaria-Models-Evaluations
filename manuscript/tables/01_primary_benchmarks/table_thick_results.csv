@@ -1,0 +1,5 @@
+Model,n,TP,FP,TN,FN,Sensitivity,F1,Accuracy,MeanConf,Gap_vs_WHO_90pct
+MalariaScreener_Sudan,432,294,0,0,138,0.681,0.81,0.681,0.655,0.219
+MalariaScreener_Thick,432,297,0,0,135,0.688,0.815,0.688,0.671,0.213
+MalariaScreener_Thin,432,327,0,0,105,0.757,0.862,0.757,0.746,0.143
+fbononibelloepoch_YOLOv8,432,379,0,0,53,0.877,0.935,0.877,0.591,0.023

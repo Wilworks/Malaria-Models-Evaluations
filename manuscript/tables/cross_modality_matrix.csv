@@ -1,0 +1,5 @@
+Model,thick_sensitivity,thick_n,thin_sensitivity,thin_n
+MalariaScreener_Sudan,0.6798,432,0.7344,1011
+MalariaScreener_Thick,0.6868,432,0.7042,1011
+MalariaScreener_Thin,0.7587,432,0.7385,1011
+fbononibelloepoch_YOLOv8,0.877,432,0.6406,1011
