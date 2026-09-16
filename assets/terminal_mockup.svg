@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 620" width="100%" height="100%" style="border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); background: #0b0f19;">
+  <defs>
+    <linearGradient id="grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#00a8cc"/>
+    </linearGradient>
+    <linearGradient id="grad-green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ffaa"/>
+      <stop offset="100%" stop-color="#00b874"/>
+    </linearGradient>
+    <linearGradient id="grad-yellow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd166"/>
+      <stop offset="100%" stop-color="#f77f00"/>
+    </linearGradient>
+    <linearGradient id="grad-bar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#00ffaa"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Window Header Bar -->
+  <rect width="920" height="42" fill="#131b2e" rx="12" ry="12"/>
+  <rect y="30" width="920" height="12" fill="#131b2e"/>
+  
+  <!-- Traffic Light Buttons -->
+  <circle cx="24" cy="21" r="6.5" fill="#ff5f56"/>
+  <circle cx="44" cy="21" r="6.5" fill="#ffbd2e"/>
+  <circle cx="64" cy="21" r="6.5" fill="#27c93f"/>
+  
+  <!-- Title in Header -->
+  <text x="460" y="26" fill="#8b9bb4" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="13" font-weight="600" text-anchor="middle">wilfred@legon-lab: ~/Malaria-Models-Evaluations (run_pipeline.sh)</text>
+
+  <!-- Terminal Body Background -->
+  <rect y="42" width="920" height="578" fill="#080d1a" rx="0" ry="0"/>
+
+  <g font-family="'JetBrains Mono', 'Fira Code', 'Courier New', monospace" font-size="12.5" xml:space="preserve">
+    <!-- Hero Box Banner -->
+    <rect x="25" y="60" width="870" height="74" rx="8" fill="#101a33" stroke="#00e5ff" stroke-width="1.5"/>
+    <text x="460" y="88" fill="#00e5ff" font-weight="700" font-size="14.5" text-anchor="middle" filter="url(#glow)">🔬 MALARIA CLINICAL DIAGNOSTICS: ZERO-SHOT REPRODUCIBILITY CONSOLE</text>
+    <text x="460" y="108" fill="#e2e8f0" font-size="12" text-anchor="middle">Princess Marie Louise Hospital Cohort (N = 4,056 Micrographs) | University of Ghana, Legon</text>
+    <text x="460" y="124" fill="#ffd166" font-size="11" text-anchor="middle">16,216 Zero-Shot Inferences • 4 External Deep Learning Models • Multi-Run SHA-256 Verified</text>
+
+    <!-- Stage 1 & 2 Badges -->
+    <rect x="25" y="148" width="82" height="20" rx="4" fill="#00ffaa"/>
+    <text x="66" y="162" fill="#051a10" font-weight="700" font-size="10.5" text-anchor="middle">✔ PASS</text>
+    <text x="117" y="163" fill="#e2e8f0">Environment Verified: <tspan fill="#00e5ff" font-weight="700">Python 3.12 (Isolated .venv)</tspan> • PyTorch 2.4 (CUDA Enabled) • TensorFlow 2.16</text>
+
+    <rect x="25" y="176" width="82" height="20" rx="4" fill="#00ffaa"/>
+    <text x="66" y="190" fill="#051a10" font-weight="700" font-size="10.5" text-anchor="middle">✔ PASS</text>
+    <text x="117" y="191" fill="#e2e8f0">Cohort Ingestion: <tspan fill="#ffd166" font-weight="700">3,045 Thick Smears</tspan> + <tspan fill="#ffd166" font-weight="700">1,011 Thin Smears</tspan> (100% Uncorrupted)</text>
+
+    <!-- Live Progress Bar Section -->
+    <text x="25" y="222" fill="#a78bfa" font-weight="700">STAGE 5/7: ZERO-SHOT MULTI-MODEL INFERENCE (16,216 EVALUATIONS)</text>
+    
+    <text x="25" y="248" fill="#00e5ff" font-weight="600">▶ MS_Sudan (MobileNetV2)</text>
+    <rect x="250" y="237" width="400" height="13" rx="6.5" fill="#1a233a"/>
+    <rect x="250" y="237" width="400" height="13" rx="6.5" fill="url(#grad-bar)"/>
+    <text x="662" y="248" fill="#ffd166" font-weight="700">100.0%</text>
+    <text x="730" y="248" fill="#8b9bb4">4,056/4,056</text>
+    <text x="830" y="248" fill="#00ffaa">284 img/s</text>
+
+    <text x="25" y="274" fill="#00e5ff" font-weight="600">▶ fbononi_YOLOv8 (Detector)</text>
+    <rect x="250" y="263" width="400" height="13" rx="6.5" fill="#1a233a"/>
+    <rect x="250" y="263" width="370" height="13" rx="6.5" fill="url(#grad-bar)"/>
+    <text x="662" y="274" fill="#ffd166" font-weight="700">92.5%</text>
+    <text x="730" y="274" fill="#8b9bb4">3,752/4,056</text>
+    <text x="830" y="274" fill="#00ffaa">196 img/s</text>
+
+    <!-- Results Table -->
+    <text x="25" y="316" fill="#00ffaa" font-weight="700">STAGE 6/7: CLINICAL BENCHMARK DIAGNOSTIC PERFORMANCE MATRIX</text>
+    
+    <rect x="25" y="328" width="870" height="175" rx="8" fill="#0d1527" stroke="#1f2d4d" stroke-width="1"/>
+    
+    <!-- Table Header -->
+    <rect x="25" y="328" width="870" height="28" rx="8" fill="#15213b"/>
+    <text x="45" y="346" fill="#8b9bb4" font-weight="700">MODALITY</text>
+    <text x="140" y="346" fill="#8b9bb4" font-weight="700">MODEL IDENTIFIER</text>
+    <text x="345" y="346" fill="#8b9bb4" font-weight="700">TRAINING DOMAIN</text>
+    <text x="510" y="346" fill="#8b9bb4" font-weight="700">SENSITIVITY [95% CI]</text>
+    <text x="695" y="346" fill="#8b9bb4" font-weight="700">SPECIFICITY [95% CI]</text>
+
+    <!-- Table Rows -->
+    <text x="45" y="375" fill="#00e5ff">Thick</text>
+    <text x="140" y="375" fill="#e2e8f0">MalariaScreener_Sudan</text>
+    <text x="345" y="375" fill="#a78bfa">Sudan (East Africa)</text>
+    <text x="510" y="375" fill="#00ffaa" font-weight="600">66.92% [65.2 - 68.6]</text>
+    <text x="695" y="375" fill="#ffd166">33.33% [13.3 - 61.3]</text>
+
+    <text x="45" y="401" fill="#00e5ff">Thick</text>
+    <text x="140" y="401" fill="#a78bfa" font-weight="700">fbononi_YOLOv8 (Detector)</text>
+    <text x="345" y="401" fill="#a78bfa">Spatial Micrographs</text>
+    <text x="510" y="401" fill="#00ffaa" font-weight="700">87.43% [86.2 - 88.6]</text>
+    <text x="695" y="401" fill="#ffd166">26.67% [9.5 - 55.1]</text>
+
+    <rect x="35" y="415" width="850" height="26" rx="4" fill="#062b1b" stroke="#00ffaa" stroke-width="0.8"/>
+    <text x="45" y="432" fill="#00ffaa" font-weight="700">Thin</text>
+    <text x="140" y="432" fill="#00ffaa" font-weight="700">★ MalariaScreener_Sudan</text>
+    <text x="345" y="432" fill="#00ffaa">Sudan (East Africa)</text>
+    <text x="510" y="432" fill="#e2e8f0">68.80% [65.9 - 71.6]</text>
+    <text x="695" y="432" fill="#00ffaa" font-weight="700">58.82% [42.2 - 73.6] (5.0×)</text>
+
+    <text x="45" y="460" fill="#00e5ff">Thin</text>
+    <text x="140" y="460" fill="#e2e8f0">MalariaScreener_Thin</text>
+    <text x="345" y="460" fill="#a78bfa">Chittagong (S. Asia)</text>
+    <text x="510" y="460" fill="#00ffaa">71.86% [69.0 - 74.6]</text>
+    <text x="695" y="460" fill="#ff5f56">11.76% [3.3 - 34.3]</text>
+
+    <text x="45" y="488" fill="#00e5ff">Thin</text>
+    <text x="140" y="488" fill="#e2e8f0">fbononi_YOLOv8 (Cliff)</text>
+    <text x="345" y="488" fill="#a78bfa">Spatial Micrographs</text>
+    <text x="510" y="488" fill="#ff5f56" font-weight="700">64.06% [61.0 - 67.0] (-23.4%)</text>
+    <text x="695" y="488" fill="#ffd166">17.65% [5.7 - 41.0]</text>
+
+    <!-- Completion Seal -->
+    <rect x="25" y="520" width="870" height="70" rx="8" fill="#091b17" stroke="#00ffaa" stroke-width="1.5"/>
+    <text x="45" y="546" fill="#00ffaa" font-weight="700" font-size="13">✔ BENCHMARK COMPLETE &amp; BIT-FOR-BIT DETERMINISM SEALED</text>
+    <text x="45" y="567" fill="#8b9bb4">Master Cryptographic Hash: <tspan fill="#ffd166" font-family="'JetBrains Mono', monospace">SHA-256: 44e8e25... (100.000% Multi-Run Identical)</tspan></text>
+    <text x="45" y="583" fill="#8b9bb4">Results Export: <tspan fill="#00e5ff">results/baseline/predictions_manifest.csv</tspan></text>
+  </g>
+</svg>
