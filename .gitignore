@@ -1,16 +1,21 @@
-# Data directories (raw datasets and heavy downloads)
+# Data directories (raw datasets and heavy downloads - transferred via pendrive)
 data/raw/
 data/processed/
 data/quality_metrics/
 
-# Model weights & downloaded binaries
-models/weights/
-*.pt
-*.pth
-*.tflite
-*.pb
-*.h5
-*.onnx
+# Evaluation results & cache (to be generated fresh on benchmark machine)
+results/
+scratch/
+.cache/
+
+# Do NOT commit manuscript folder (per user instruction)
+manuscript/
+
+# Full Android C++ build tree (not needed for Python inference)
+models/external/MalariaScreener_full/
+
+# Local study notes & drafts
+*STUDY_NOTES*.md
 
 # Python virtual environment & cache
 __pycache__/
