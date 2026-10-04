@@ -127,7 +127,7 @@ Figure~\ref{fig:d4_transforms} demonstrates the empirical validation grid across
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/fig_s1_bounding_box_transforms_ghana.png}
+\includegraphics[width=0.95\linewidth]{figures/fig1_d4_transforms.png}
 \caption{Validation of the $D_4$ dihedral group transformation protocol on Ghanaian thick smear micrographs. The 8-element transformation orbit (identity, $90^\circ$, $180^\circ$, $270^\circ$ orthogonal rotations, horizontal flip, vertical flip, and diagonal reflections) preserves exact bounding box alignment and biological morphological fidelity without coordinate drift.}
 \label{fig:d4_transforms}
 \end{figure}
@@ -164,6 +164,7 @@ Table~\ref{tab:thick} summarizes zero-shot diagnostic performance across the aud
 \small
 \caption{Diagnostic performance on Audited Thick Blood Smear Cohort ($N = 3,902$, post-quarantine).}
 \label{tab:thick}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lccccc}
 \toprule
 \textbf{Model} & \textbf{Training Domain} & \textbf{Sensitivity [95\% CI]} & \textbf{Specificity [95\% CI]} & \textbf{$F_1$-Score} & \textbf{Accuracy} \\
@@ -173,7 +174,8 @@ MalariaScreener\_Thick & Bangladesh        & 30.29\% [28.8--31.8] & 83.18\% [79.
 MalariaScreener\_Thin  & Bangladesh        & 21.26\% [19.9--22.7] & 98.82\% [97.3--99.5] & 0.3503 & 29.65\% \\
 fbononi\_YOLOv8        & Field Bounding Box & 47.13\% [45.5--48.8] & 96.92\% [94.8--98.2] & 0.6390 & 52.51\% \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Thin Smear Diagnostic Performance (Ghana \& Kano Nigeria)}
@@ -184,6 +186,7 @@ Table~\ref{tab:thin} summarizes zero-shot diagnostic performance on the thin blo
 \small
 \caption{Diagnostic performance on Thin Blood Smear Cohort ($N = 2,555$).}
 \label{tab:thin}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lccccc}
 \toprule
 \textbf{Model} & \textbf{Training Domain} & \textbf{Sensitivity [95\% CI]} & \textbf{Specificity [95\% CI]} & \textbf{FPR} & \textbf{$F_1$-Score} \\
@@ -193,12 +196,13 @@ MalariaScreener\_Thick & Bangladesh        & 16.86\% [15.2--18.7] & 93.68\% [91.
 MalariaScreener\_Thin  & Bangladesh        & 20.27\% [18.4--22.2] & 57.96\% [54.6--61.3] & 42.04\% & 0.2890 \\
 fbononi\_YOLOv8        & Field Bounding Box & 28.23\% [26.2--30.4] & 68.89\% [65.6--72.0] & 31.11\% & 0.3948 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figures/fig2_zero_shot_performance.png}
+\includegraphics[width=0.95\linewidth]{figures/fig2_zero_shot_performance.png}
 \caption{Comparative diagnostic sensitivity and specificity across thick ($N = 3,902$) and thin ($N = 2,555$) blood smears under zero-shot transfer. The dashed red line denotes the WHO Level-1 screening requirement ($\ge 90\%$). Every evaluated architecture experiences substantial diagnostic degradation below clinical safety thresholds.}
 \label{fig:zero_shot_performance}
 \end{figure}
@@ -211,6 +215,7 @@ Table~\ref{tab:geographic} presents model performance disaggregated by regional 
 \small
 \caption{Zero-Shot Performance Disaggregated by Clinical Center.}
 \label{tab:geographic}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{llcccc}
 \toprule
 \textbf{Center / Cohort} & \textbf{Model} & \textbf{Smear} & \textbf{Sensitivity [95\% CI]} & \textbf{Specificity [95\% CI]} & \textbf{$F_1$-Score} \\
@@ -231,7 +236,8 @@ Table~\ref{tab:geographic} presents model performance disaggregated by regional 
 ($N = 1,544$ thin)           & MalariaScreener\_Thin  & Thin  & 12.95\% [10.8--15.5] & 55.96\% [52.4--59.4] & 0.1650 \\
                              & fbononi\_YOLOv8        & Thin  & 27.59\% [24.6--30.9] & 67.88\% [64.5--71.1] & 0.3455 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Optical Focus Blur Stratification}
@@ -242,6 +248,7 @@ Table~\ref{tab:quality} details diagnostic sensitivity and specificity stratifie
 \small
 \caption{Diagnostic Sensitivity and Specificity Stratified by Optical Focus Quality.}
 \label{tab:quality}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{llccc}
 \toprule
 \textbf{Smear} & \textbf{Model} & \textbf{Low Quality (Blurry)} & \textbf{Medium Quality} & \textbf{High Quality (Sharp)} \\
@@ -255,12 +262,13 @@ Thin  & MalariaScreener\_Sudan  & 75.06\% / 20.00\% & 75.00\% / 18.09\% & 27.71\
 Thin  & MalariaScreener\_Thin   & 28.43\% / 60.00\% & 23.18\% / 37.23\% & 14.05\% / 60.65\% \\
 Thin  & fbononi\_YOLOv8         & 19.95\% / 64.00\% & 34.85\% / 65.96\% & 27.84\% / 69.46\% \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/fig3_optical_quality_curves.png}
+\includegraphics[width=0.95\linewidth]{figures/fig3_optical_quality_curves.png}
 \caption{Impact of optical focus blur on diagnostic sensitivity. Severe defocus blur impairs visual feature resolution, with sensitivity degrading by up to 23.8\% in thin smear monolayers, demonstrating the critical necessity of an automated pre-inference focus gate.}
 \label{fig:optical_quality_curves}
 \end{figure}
@@ -273,6 +281,7 @@ To evaluate RQ5 and determine whether domain-specific regional adaptation overco
 \small
 \caption{Comparative Diagnostic Performance: Zero-Shot vs. Regionally Fine-Tuned Models across West African Smears (RQ5).}
 \label{tab:finetuning}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Architecture \& Modality} & \multicolumn{2}{c}{\textbf{Sensitivity (\%)}} & \multicolumn{2}{c}{\textbf{Specificity (\%)}} & \bm{$\Delta F_1$} & \textbf{WHO Level-1} \\
@@ -289,7 +298,8 @@ MalariaScreener\_Sudan & 53.64\% & \textit{[Pending FT]} & 43.74\% & \textit{[Pe
 MalariaScreener\_Thin  & 20.27\% & \textit{[Pending FT]} & 57.96\% & \textit{[Pending FT]} & \textit{[---]} & \textit{[Pending FT]} \\
 fbononi\_YOLOv8        & 28.23\% & \textit{[Pending FT]} & 68.89\% & \textit{[Pending FT]} & \textit{[---]} & \textit{[Pending FT]} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 % ── SECTION 4: DISCUSSION ───────────────────────────────────
