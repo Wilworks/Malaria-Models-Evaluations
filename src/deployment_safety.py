@@ -1,42 +1,75 @@
 """
-Clinical Deployment-Safety Evaluator (Answers RQ3).
-Translates zero-shot performance drop and error patterns into clinical risk scores
-and minimum evidence thresholds for Ghanaian healthcare deployment.
+Clinical Deployment-Safety Evaluator.
+Benchmarks zero-shot model performance against World Health Organization (WHO)
+and CLSI clinical readiness standards for diagnostic malaria screening.
 """
 
-from typing import Dict, List, Union
+from typing import Dict, Union, Any
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DeploymentSafetyEvaluator:
-    """Translates model performance into clinical deployment safety thresholds."""
+    """
+    Evaluates empirical diagnostic metrics against international healthcare standards.
+    WHO Target Product Profile (TPP) for Malaria Microscopy requires:
+      - Diagnostic Sensitivity: >= 95.0%
+      - Diagnostic Specificity: >= 90.0%
+    """
 
-    DEFAULT_MIN_SENSITIVITY = 0.95  # WHO recommended diagnostic benchmark
-    DEFAULT_MIN_SPECIFICITY = 0.90
+    DEFAULT_MIN_SENSITIVITY: float = 0.95
+    DEFAULT_MIN_SPECIFICITY: float = 0.90
 
-    def evaluate_safety_profile(self, metrics: Dict[str, float]) -> Dict[str, Union[str, float, bool]]:
+    def __init__(
+        self,
+        min_sensitivity: float = DEFAULT_MIN_SENSITIVITY,
+        min_specificity: float = DEFAULT_MIN_SPECIFICITY
+    ):
+        self.min_sensitivity = min_sensitivity
+        self.min_specificity = min_specificity
+
+    def evaluate_safety_profile(self, metrics: Dict[str, Any]) -> Dict[str, Union[str, float, bool]]:
         """
-        Evaluates model metrics against WHO clinical safety thresholds.
+        Evaluates model metrics against WHO clinical safety benchmarks.
+
+        Returns a structured assessment with risk categorization:
+            - PASSES: Meets or exceeds both sensitivity and specificity standards.
+            - HIGH RISK: Fails sensitivity (silent false negatives leave infected patients untreated).
+            - MODERATE RISK: Meets sensitivity but fails specificity (over-treatment and drug waste).
+            - UNSAFE: Fails both criteria.
         """
-        sens = metrics.get("sensitivity", 0.0)
-        spec = metrics.get("specificity", 0.0)
+        sens = float(metrics.get("sensitivity", 0.0))
+        spec = float(metrics.get("specificity", 0.0))
 
-        sens_pass = sens >= self.DEFAULT_MIN_SENSITIVITY
-        spec_pass = spec >= self.DEFAULT_MIN_SPECIFICITY
+        sens_pass = sens >= self.min_sensitivity
+        spec_pass = spec >= self.min_specificity
 
-        safety_verdict = "UNSAFE FOR CLINICAL DEPLOYMENT"
         if sens_pass and spec_pass:
-            safety_verdict = "PASSES MINIMUM CLINICAL THRESHOLD"
+            verdict = "PASS: Meets WHO Clinical Screening Standards"
+            risk_level = "LOW"
+            clinical_implication = "Safe for point-of-care assisted screening under medical supervision."
         elif not sens_pass and spec_pass:
-            safety_verdict = "HIGH RISK: SILENT FALSE NEGATIVES (Unacceptable missed infections)"
+            verdict = "FAIL: Critical False-Negative Risk"
+            risk_level = "CRITICAL"
+            clinical_implication = "Unacceptable missed infections; patients with active parasitemia will go untreated."
         elif sens_pass and not spec_pass:
-            safety_verdict = "MODERATE RISK: HIGH FALSE POSITIVES (Triggers unnecessary antimalarial treatment)"
+            verdict = "FAIL: High False-Positive Rate"
+            risk_level = "MODERATE"
+            clinical_implication = "Triggers unnecessary antimalarial treatment, increasing toxicity risk and drug resistance."
+        else:
+            verdict = "FAIL: Unsafe for Autonomous Clinical Deployment"
+            risk_level = "SEVERE"
+            clinical_implication = "Model exhibits pervasive cross-domain diagnostic degradation across both positive and negative cases."
 
         return {
-            "verdict": safety_verdict,
-            "sensitivity_measured": sens,
-            "sensitivity_required": self.DEFAULT_MIN_SENSITIVITY,
+            "verdict": verdict,
+            "risk_level": risk_level,
+            "clinical_implication": clinical_implication,
+            "sensitivity_measured": round(sens, 4),
+            "sensitivity_required": self.min_sensitivity,
             "sensitivity_pass": sens_pass,
-            "specificity_measured": spec,
-            "specificity_required": self.DEFAULT_MIN_SPECIFICITY,
+            "specificity_measured": round(spec, 4),
+            "specificity_required": self.min_specificity,
             "specificity_pass": spec_pass
         }

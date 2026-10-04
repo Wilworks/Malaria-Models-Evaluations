@@ -1,18 +1,12 @@
 """
-Master Benchmark and Reproducibility Orchestrator.
-Executes the full zero-shot evaluation pipeline end-to-end:
-  1. Verifies dataset integrity across Thick (n=3,045) and Thin (n=1,011) smears.
-  2. Runs zero-shot inference for all 4 external models (Sudan, Thick, Thin, YOLOv8).
+Master Benchmark and Clinical Reproducibility Orchestrator.
+Executes the zero-shot empirical evaluation pipeline across candidate malaria models:
+  1. Ingests and validates multi-source clinical blood smear cohorts (thick and thin smears).
+  2. Executes zero-shot inference for available external models (Sudan, Thick, Thin, YOLOv8).
   3. Computes comprehensive diagnostic metrics with 95% Wilson Score Confidence Intervals.
-  4. Computes physics-informed quality-stratified performance across Laplacian focus tertiles.
-  5. Exports publication-grade LaTeX and CSV tables into manuscript/tables/.
-  6. Generates publication-grade figures (PDF, SVG, 300 DPI PNG) with standalone captions.
-  7. Computes cryptographic SHA-256 hashes of all outputs for deterministic multi-run reproducibility verification.
-
-Usage:
-  python scripts/run_master_benchmark.py --run-id 1
-  python scripts/run_master_benchmark.py --run-id 2
-  python scripts/run_master_benchmark.py --run-id 3
+  4. Evaluates clinical deployment readiness against WHO screening thresholds.
+  5. Computes quality-stratified performance across Laplacian focus blur tertiles.
+  6. Exports structured CSV, JSON, and summary tables disaggregated by data source.
 """
 
 import sys
@@ -21,8 +15,10 @@ import cv2
 import json
 import time
 import hashlib
+import logging
 import argparse
 from pathlib import Path
+from typing import List, Dict, Optional
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -31,14 +27,18 @@ from tqdm import tqdm
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.data_loader import LacunaGhanaDataset
-from src.metrics import calculate_metrics, wilson_score_interval
+from src.data_loader import MultiSourceMalariaDataset
+from src.metrics import ClassificationMetrics, wilson_score_interval
+from src.deployment_safety import DeploymentSafetyEvaluator
 from models.wrappers.malariascreener_wrapper import MalariaScreenerWrapper
 from models.wrappers.yolo_wrapper import YOLOMalariaWrapper
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+
 
 def compute_sha256(file_path: Path) -> str:
-    """Computes SHA-256 checksum of a file."""
+    """Computes SHA-256 checksum of a file for deterministic verification."""
     hasher = hashlib.sha256()
     with open(file_path, "rb") as f:
         while chunk := f.read(65536):
@@ -46,8 +46,12 @@ def compute_sha256(file_path: Path) -> str:
     return hasher.hexdigest()
 
 
-def build_models(root_dir: Path):
-    """Instantiates all 4 candidate models."""
+def build_models(
+    root_dir: Path,
+    selected_models: Optional[List[str]] = None,
+    conf_threshold: float = 0.15
+) -> List:
+    """Instantiates verified model wrappers."""
     models = []
     
     ms_thick = root_dir / "models" / "external" / "MalariaScreener" / "assets" / "malaria_thick_model.tflite"
@@ -55,238 +59,215 @@ def build_models(root_dir: Path):
     ms_sudan = root_dir / "models" / "external" / "MalariaScreener" / "assets" / "malaria_sudan_model.pb"
     fbononi = root_dir / "models" / "external" / "fbononibelloepoch" / "best_yolo.pt"
     
-    if ms_sudan.exists():
-        models.append(MalariaScreenerWrapper(str(ms_sudan), smear_type="sudan"))
-    if ms_thick.exists():
-        models.append(MalariaScreenerWrapper(str(ms_thick), smear_type="thick"))
-    if ms_thin.exists():
-        models.append(MalariaScreenerWrapper(str(ms_thin), smear_type="thin"))
-    if fbononi.exists():
-        models.append(YOLOMalariaWrapper("fbononibelloepoch_YOLOv8", str(fbononi), confidence_threshold=0.15))
-        
+    candidates = [
+        ("sudan", "MalariaScreener_Sudan", ms_sudan, lambda p: MalariaScreenerWrapper(str(p), smear_type="sudan")),
+        ("thick", "MalariaScreener_Thick", ms_thick, lambda p: MalariaScreenerWrapper(str(p), smear_type="thick")),
+        ("thin", "MalariaScreener_Thin", ms_thin, lambda p: MalariaScreenerWrapper(str(p), smear_type="thin")),
+        ("yolo", "fbononibelloepoch_YOLOv8", fbononi, lambda p: YOLOMalariaWrapper("fbononibelloepoch_YOLOv8", str(p), confidence_threshold=conf_threshold))
+    ]
+
+    for key, name, path, factory in candidates:
+        if selected_models and "all" not in selected_models and key not in selected_models:
+            continue
+        if path.exists() and path.stat().st_size > 0:
+            try:
+                models.append(factory(path))
+                logger.info("Loaded model candidate: %s", name)
+            except Exception as e:
+                logger.warning("Failed to initialize %s: %s", name, e)
+        else:
+            logger.warning("Model checkpoint not found for %s at %s", name, path)
+            
     return models
 
 
-def load_ground_truth(root_dir: Path):
-    """Indexes ground-truth binary status for all images."""
-    data_raw = root_dir / "data" / "raw"
-    gt_map = {}
-    
-    # Thick smears (labels in labels_yolo)
-    thick_lbl = data_raw / "thick_smear" / "labels_yolo"
-    if thick_lbl.exists():
-        for tf in thick_lbl.glob("*.txt"):
-            content = tf.read_text(encoding="utf-8", errors="ignore").strip()
-            # Parasite is class 0
-            is_pos = 0
-            if content:
-                for line in content.splitlines():
-                    parts = line.strip().split()
-                    if parts and parts[0] == "0":
-                        is_pos = 1
-                        break
-            gt_map[(tf.stem, "thick")] = is_pos
-            
-    # Thin smears (parasite classes: 0, 1, 2, 5; negative controls: 3, 4)
-    thin_lbl = data_raw / "thin_smear" / "labels_yolo"
-    parasite_classes = {"0", "1", "2", "5"}
-    if thin_lbl.exists():
-        for tf in thin_lbl.glob("*.txt"):
-            if tf.name == "label.txt":
-                continue
-            content = tf.read_text(encoding="utf-8", errors="ignore").strip()
-            is_pos = 0
-            if content:
-                for line in content.splitlines():
-                    parts = line.strip().split()
-                    if parts and parts[0] in parasite_classes:
-                        is_pos = 1
-                        break
-            gt_map[(tf.stem, "thin")] = is_pos
-            
-    return gt_map
-
-
-def run_master_benchmark(run_id: int = 1, output_dir: Path = None):
+def run_master_benchmark(
+    data_dir: Optional[Path] = None,
+    output_dir: Optional[Path] = None,
+    smear_types: Optional[List[str]] = None,
+    selected_models: Optional[List[str]] = None,
+    conf_threshold: float = 0.15,
+    limit_samples: Optional[int] = None,
+    shuffle: bool = True,
+    seed: int = 42,
+    run_id: int = 1
+) -> pd.DataFrame:
+    """Executes the complete multi-source evaluation benchmark."""
     start_time = time.time()
-    print(f"\n================================================================================")
-    print(f"      STARTING MASTER REPRODUCIBLE BENCHMARK RUN #{run_id}")
-    print(f"================================================================================\n")
-    
-    if output_dir is None:
-        output_dir = ROOT / "results" / f"run_{run_id}"
+    data_dir = Path(data_dir or (ROOT / "data" / "raw"))
+    output_dir = Path(output_dir or (ROOT / "results" / f"run_{run_id}"))
     output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # 1. Dataset Audit
-    thick_dir = ROOT / "data" / "raw" / "thick_smear"
-    thin_dir = ROOT / "data" / "raw" / "thin_smear"
-    n_thick = len(list(thick_dir.glob("*.jpg")))
-    n_thin = len(list(thin_dir.glob("*.jpg")))
-    print(f"[Dataset Audit] Found {n_thick} thick smear images and {n_thin} thin smear images.")
-    print(f"Total Cohort Size: {n_thick + n_thin} clinical blood smear micrographs.\n")
-    
-    # 2. Model Loading
-    models = build_models(ROOT)
-    print(f"[Models Loaded] {len(models)} candidate models active:")
-    for m in models:
-        print(f"  - {m.model_name}")
-    print()
-    
-    # 3. Ground Truth Mapping
-    gt_map = load_ground_truth(ROOT)
-    print(f"[Ground Truth] Indexed {len(gt_map)} ground truth annotations.\n")
-    
-    # 4. Predictions Manifest Management (Incremental / Cached)
-    master_manifest_path = ROOT / "data" / "processed" / "predictions_manifest.csv"
-    if master_manifest_path.exists():
-        master_df = pd.read_csv(master_manifest_path)
-    else:
-        master_df = pd.DataFrame()
-        
-    predictions = master_df.to_dict(orient="records") if not master_df.empty else []
-    existing_keys = set((str(r["image_id"]), str(r["model_name"]), str(r["smear_type"])) for r in predictions)
-    
-    # 5. Execute Zero-Shot Inference (Thin smears across all models first, then Thick smears)
-    for smear_type in ["thin", "thick"]:
-        ds = LacunaGhanaDataset(str(ROOT / "data" / "raw"), smear_type=smear_type)
+    smear_types = smear_types or ["thick", "thin"]
+
+    logger.info("=" * 70)
+    logger.info("STARTING MALARIA AI MULTI-SOURCE BENCHMARK RUN #%d", run_id)
+    logger.info("Data Directory  : %s", data_dir)
+    logger.info("Output Directory: %s", output_dir)
+    logger.info("Smear Modalities: %s", smear_types)
+    logger.info("=" * 70)
+
+    # 1. Load Candidate Models
+    models = build_models(ROOT, selected_models=selected_models, conf_threshold=conf_threshold)
+    if not models:
+        logger.error("No model checkpoints available to benchmark! Run scripts/download_models.py first.")
+        return pd.DataFrame()
+
+    # 2. Ingest Cohorts across Data Sources
+    datasets = {}
+    for smear in smear_types:
+        ds = MultiSourceMalariaDataset(str(data_dir), smear_type=smear, shuffle=shuffle, seed=seed)
+        if len(ds) > 0:
+            datasets[smear] = ds
+        else:
+            logger.warning("No %s smear micrographs discovered in %s", smear, data_dir)
+
+    if not datasets:
+        logger.error("No images found in data directory: %s. Please add dataset images.", data_dir)
+        return pd.DataFrame()
+
+    # 3. Inference Loop
+    predictions = []
+    for smear, ds in datasets.items():
         items = ds.annotations
-        print(f"\n--- Zero-Shot Inference: {smear_type.upper()} SMEARS ({len(items)} slides) ---")
-        
+        if limit_samples and limit_samples > 0:
+            items = items[:limit_samples]
+            logger.info("Limited %s evaluation to %d samples for rapid testing", smear, len(items))
+
+        logger.info("Running zero-shot inference on %s smears (%d slides)...", smear.upper(), len(items))
+
         for model in models:
-            pending = [it for it in items if (str(it["image_id"]), model.model_name, smear_type) not in existing_keys]
-            if not pending:
-                print(f"  [Cached] {model.model_name}: All {len(items)} slides already evaluated.")
-                continue
-                
-            print(f"  [Evaluating] {model.model_name}: Processing {len(pending)} pending slides...")
-            for it in tqdm(pending, desc=f"{model.model_name} ({smear_type})"):
-                img_path = it["image_path"]
+            for item in tqdm(items, desc=f"{model.model_name} [{smear}]"):
+                img_path = item["image_path"]
                 img = cv2.imread(img_path)
                 if img is None:
                     continue
+
                 try:
                     res = model.predict(img)
-                    pred_class = res.get("predicted_class", 0)
-                    confidence = res.get("confidence", 0.0)
-                    bboxes = res.get("boxes", [])
-                    
-                    record = {
-                        "image_id": it["image_id"],
-                        "smear_type": smear_type,
+                    predictions.append({
+                        "image_id": item["image_id"],
+                        "data_source": item.get("data_source", "lacuna_ghana"),
+                        "smear_type": smear,
                         "model_name": model.model_name,
-                        "predicted_class": pred_class,
-                        "confidence": float(confidence),
+                        "ground_truth": item["ground_truth"],
+                        "predicted_class": res.get("predicted_class", 0),
+                        "confidence": float(res.get("confidence", 0.0)),
+                        "parasite_count": res.get("parasite_count", 0),
+                        "wbc_count": res.get("wbc_count", 0),
                         "detected_objects": res.get("detected_objects", 0),
-                        "boxes_json": json.dumps(bboxes),
+                        "boxes_json": json.dumps(res.get("boxes", [])),
                         "image_path": img_path
-                    }
-                    predictions.append(record)
-                    existing_keys.add((str(it["image_id"]), model.model_name, smear_type))
+                    })
                 except Exception as e:
-                    print(f"[Warning] Inference failed on {img_path}: {e}")
-                    
-    # Save unified predictions (deterministically sorted for SHA-256 reproducibility)
+                    logger.warning("Inference failure on %s (%s): %s", img_path, model.model_name, e)
+
+    if not predictions:
+        logger.warning("No predictions generated.")
+        return pd.DataFrame()
+
     pred_df = pd.DataFrame(predictions)
-    pred_df["image_id"] = pred_df["image_id"].astype(str)
-    pred_df["confidence"] = pred_df["confidence"].astype(float).round(6)
-    pred_df = pred_df.sort_values(by=["smear_type", "model_name", "image_id"]).reset_index(drop=True)
-    master_manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    pred_df.to_csv(master_manifest_path, index=False)
+    pred_df = pred_df.sort_values(by=["data_source", "smear_type", "model_name", "image_id"]).reset_index(drop=True)
     pred_df.to_csv(output_dir / "predictions_manifest.csv", index=False)
-    print(f"\n[Inference Complete] Total predictions in manifest: {len(pred_df)}")
-    
-    # 6. Metrics & Statistical Confidence Intervals
-    print("\n--- Computing Diagnostic Performance & 95% Confidence Intervals ---")
-    pred_df["image_id"] = pred_df["image_id"].astype(str)
-    pred_df["gt"] = pred_df.apply(lambda r: gt_map.get((str(r["image_id"]), str(r["smear_type"])), 0), axis=1)
-    
-    # Quality Manifest Merge
-    qual_path = ROOT / "data" / "quality_metrics" / "quality_manifest.csv"
-    if qual_path.exists():
-        qual_df = pd.read_csv(qual_path)
-        qual_df["image_id"] = qual_df["image_id"].astype(str)
-        qual_df["quality_strata"] = pd.qcut(qual_df["blur_laplacian"], q=3, labels=["Low", "Medium", "High"], duplicates="drop")
-        pred_df = pred_df.merge(qual_df[["image_id", "smear_type", "blur_laplacian", "michelson_contrast", "snr", "quality_strata"]], 
-                               on=["image_id", "smear_type"], how="left")
-                               
+    logger.info("Saved %d predictions to %s", len(pred_df), output_dir / "predictions_manifest.csv")
+
+    # 4. Diagnostic Metrics & Confidence Intervals
+    logger.info("Computing diagnostic performance metrics (overall and per-source)...")
     table_rows = []
-    for smear in ["thick", "thin"]:
+    safety_evaluator = DeploymentSafetyEvaluator()
+    safety_audit = {}
+
+    distinct_sources = sorted(pred_df["data_source"].unique().tolist())
+    has_multiple_sources = len(distinct_sources) > 1
+
+    for smear in smear_types:
         smear_sub = pred_df[pred_df["smear_type"] == smear]
+        if smear_sub.empty:
+            continue
+
         for model_name, grp in smear_sub.groupby("model_name"):
-            gt = grp["gt"].values
-            pred = grp["predicted_class"].values
-            
-            TP = int(((pred == 1) & (gt == 1)).sum())
-            FP = int(((pred == 1) & (gt == 0)).sum())
-            TN = int(((pred == 0) & (gt == 0)).sum())
-            FN = int(((pred == 0) & (gt == 1)).sum())
-            n = len(grp)
-            
-            sens = TP / (TP + FN) if (TP + FN) > 0 else 0.0
-            spec = TN / (TN + FP) if (TN + FP) > 0 else 0.0
-            f1 = (2 * TP) / (2 * TP + FP + FN) if (2 * TP + FP + FN) > 0 else 0.0
-            acc = (TP + TN) / n if n > 0 else 0.0
-            
-            # 95% Wilson Score Intervals
-            sens_low, sens_high = wilson_score_interval(TP, TP + FN)
-            spec_low, spec_high = wilson_score_interval(TN, TN + FP)
-            
+            # A. Overall Pooled Benchmark
+            pooled_metrics = ClassificationMetrics.compute_binary_metrics(
+                grp["ground_truth"].values,
+                grp["predicted_class"].values,
+                y_prob=grp["confidence"].values
+            )
+            safety = safety_evaluator.evaluate_safety_profile(pooled_metrics)
+            sens_low, sens_high = pooled_metrics["sensitivity_ci_95"]
+            spec_low, spec_high = pooled_metrics["specificity_ci_95"]
+
             table_rows.append({
                 "Modality": smear.capitalize(),
+                "Data_Source": "Pooled (All West Africa)" if has_multiple_sources else distinct_sources[0],
                 "Model": model_name,
-                "N": n,
-                "TP": TP,
-                "FP": FP,
-                "TN": TN,
-                "FN": FN,
-                "Sensitivity": round(sens * 100, 2),
+                "N": pooled_metrics["n_samples"],
+                "TP": pooled_metrics["tp"],
+                "FP": pooled_metrics["fp"],
+                "TN": pooled_metrics["tn"],
+                "FN": pooled_metrics["fn"],
+                "Sensitivity (%)": round(pooled_metrics["sensitivity"] * 100, 2),
                 "Sens_95CI": f"[{sens_low*100:.1f}-{sens_high*100:.1f}]",
-                "Specificity": round(spec * 100, 2) if (TN + FP) > 0 else "N/A",
-                "Spec_95CI": f"[{spec_low*100:.1f}-{spec_high*100:.1f}]" if (TN + FP) > 0 else "N/A",
-                "F1_Score": round(f1 * 100, 2),
-                "Accuracy": round(acc * 100, 2),
-                "Mean_Conf": round(float(grp["confidence"].mean()) * 100, 2)
+                "Specificity (%)": round(pooled_metrics["specificity"] * 100, 2) if (pooled_metrics["tn"] + pooled_metrics["fp"]) > 0 else "N/A",
+                "Spec_95CI": f"[{spec_low*100:.1f}-{spec_high*100:.1f}]" if (pooled_metrics["tn"] + pooled_metrics["fp"]) > 0 else "N/A",
+                "F1_Score": round(pooled_metrics["f1_score"], 4),
+                "Accuracy (%)": round(pooled_metrics["accuracy"] * 100, 2),
+                "Clinical_Safety": safety["risk_level"]
             })
-            
+
+            # B. Per-Source Disaggregated Performance (if multiple sources present)
+            if has_multiple_sources:
+                for src, src_grp in grp.groupby("data_source"):
+                    src_metrics = ClassificationMetrics.compute_binary_metrics(
+                        src_grp["ground_truth"].values,
+                        src_grp["predicted_class"].values,
+                        y_prob=src_grp["confidence"].values
+                    )
+                    s_low, s_high = src_metrics["sensitivity_ci_95"]
+                    sp_low, sp_high = src_metrics["specificity_ci_95"]
+
+                    table_rows.append({
+                        "Modality": smear.capitalize(),
+                        "Data_Source": src,
+                        "Model": model_name,
+                        "N": src_metrics["n_samples"],
+                        "TP": src_metrics["tp"],
+                        "FP": src_metrics["fp"],
+                        "TN": src_metrics["tn"],
+                        "FN": src_metrics["fn"],
+                        "Sensitivity (%)": round(src_metrics["sensitivity"] * 100, 2),
+                        "Sens_95CI": f"[{s_low*100:.1f}-{s_high*100:.1f}]",
+                        "Specificity (%)": round(src_metrics["specificity"] * 100, 2) if (src_metrics["tn"] + src_metrics["fp"]) > 0 else "N/A",
+                        "Spec_95CI": f"[{sp_low*100:.1f}-{sp_high*100:.1f}]" if (src_metrics["tn"] + src_metrics["fp"]) > 0 else "N/A",
+                        "F1_Score": round(src_metrics["f1_score"], 4),
+                        "Accuracy (%)": round(src_metrics["accuracy"] * 100, 2),
+                        "Clinical_Safety": safety_evaluator.evaluate_safety_profile(src_metrics)["risk_level"]
+                    })
+
+            safety_audit[f"{model_name}_{smear}"] = safety
+
     summary_df = pd.DataFrame(table_rows)
-    print("\n" + summary_df.to_string(index=False) + "\n")
-    
-    # Save CSV and LaTeX tables
-    tables_dir = ROOT / "manuscript" / "tables"
-    tables_dir.mkdir(parents=True, exist_ok=True)
-    summary_df.to_csv(tables_dir / "table1_master_diagnostic_performance.csv", index=False)
+    logger.info("\n%s\n", summary_df.to_string(index=False))
+
+    # Save summary tables
     summary_df.to_csv(output_dir / "table1_master_diagnostic_performance.csv", index=False)
-    
-    # 7. Quality-Stratified Analysis
-    strat_rows = []
-    if "quality_strata" in pred_df.columns:
-        for (smear, model_name), grp in pred_df.groupby(["smear_type", "model_name"]):
-            for strata, sg in grp.groupby("quality_strata"):
-                gt = sg["gt"].values
-                pred = sg["predicted_class"].values
-                TP = int(((pred == 1) & (gt == 1)).sum())
-                FN = int(((pred == 0) & (gt == 1)).sum())
-                s = (TP / (TP + FN) * 100) if (TP + FN) > 0 else 0.0
-                strat_rows.append({
-                    "Modality": smear.capitalize(),
-                    "Model": model_name,
-                    "Strata": strata,
-                    "N": len(sg),
-                    "Sensitivity": round(s, 2),
-                    "Mean_Blur_Laplacian": round(float(sg["blur_laplacian"].mean()), 1)
-                })
-        strat_df = pd.DataFrame(strat_rows)
-        strat_df.to_csv(tables_dir / "table3_quality_stratified_sensitivity.csv", index=False)
-        strat_df.to_csv(output_dir / "table3_quality_stratified_sensitivity.csv", index=False)
+    with open(output_dir / "deployment_safety_audit.json", "w") as f:
+        json.dump(safety_audit, f, indent=2)
+
+    # 5. Quality-Stratified Analysis
+    qual_path = ROOT / "data" / "quality_metrics" / "quality_manifest.csv"
+    if qual_path.exists():
+        logger.info("Merging quality metrics from %s...", qual_path)
+        qual_df = pd.read_csv(qual_path)
+        qual_df["image_id"] = qual_df["image_id"].astype(str)
+        merged_df = pred_df.merge(qual_df, on=["image_id", "smear_type"], how="left")
         
-    # 8. Regenerate All Publication Figures & Standalone Captions
-    print("\n--- Generating High-Impact Nature/Lancet Publication Figures & Captions ---")
-    import subprocess
-    fig_script = ROOT / "scripts" / "07_generate_figures.py"
-    if fig_script.exists():
-        subprocess.run([sys.executable, str(fig_script)], check=False)
-        
-    # 9. Checksums for Reproducibility
+        if "blur_laplacian" in merged_df.columns:
+            from src.error_analysis import ErrorAnalyzer
+            analyzer = ErrorAnalyzer(merged_df)
+            strat_df = analyzer.stratify_by_quality(metric_col="blur_laplacian", bins=3)
+            strat_df.to_csv(output_dir / "table3_quality_stratified_sensitivity.csv", index=False)
+            logger.info("Saved quality-stratified performance to %s", output_dir / "table3_quality_stratified_sensitivity.csv")
+
+    # 6. Checksums for Determinism Audit
     checksums = {}
     for p in output_dir.glob("*.csv"):
         checksums[p.name] = compute_sha256(p)
@@ -297,14 +278,34 @@ def run_master_benchmark(run_id: int = 1, output_dir: Path = None):
             "elapsed_seconds": round(time.time() - start_time, 2),
             "checksums": checksums
         }, f, indent=2)
-        
-    print(f"[Run #{run_id} Completed] Output directory: {output_dir}")
-    print(f"Elapsed time: {round(time.time() - start_time, 2)}s\n")
+
+    logger.info("Run #%d successfully completed in %.2fs. Outputs saved to %s",
+                run_id, time.time() - start_time, output_dir)
     return summary_df
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run Master Malaria Benchmark")
+    parser = argparse.ArgumentParser(description="Master Malaria AI Benchmark Runner")
+    parser.add_argument("--data-dir", type=str, default="data/raw", help="Path to raw dataset directory")
+    parser.add_argument("--output-dir", type=str, default=None, help="Path to output directory")
+    parser.add_argument("--smear-type", type=str, default="both", choices=["thick", "thin", "both"], help="Smear modality to benchmark")
+    parser.add_argument("--models", nargs="+", default=["all"], help="Models to benchmark (sudan, thick, thin, yolo, all)")
+    parser.add_argument("--conf-threshold", type=float, default=0.15, help="YOLO confidence threshold")
+    parser.add_argument("--limit-samples", type=int, default=None, help="Limit sample count for testing")
+    parser.add_argument("--no-shuffle", action="store_true", help="Disable random shuffling of samples across sources")
+    parser.add_argument("--seed", type=int, default=42, help="Deterministic random seed")
     parser.add_argument("--run-id", type=int, default=1, help="Run ID number")
     args = parser.parse_args()
-    run_master_benchmark(run_id=args.run_id)
+
+    smears = ["thick", "thin"] if args.smear_type == "both" else [args.smear_type]
+    run_master_benchmark(
+        data_dir=Path(args.data_dir),
+        output_dir=Path(args.output_dir) if args.output_dir else None,
+        smear_types=smears,
+        selected_models=args.models,
+        conf_threshold=args.conf_threshold,
+        limit_samples=args.limit_samples,
+        shuffle=not args.no_shuffle,
+        seed=args.seed,
+        run_id=args.run_id
+    )

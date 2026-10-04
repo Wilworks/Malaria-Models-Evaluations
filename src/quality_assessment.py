@@ -1,43 +1,47 @@
 """
-Image Quality Proxy Metrics Module.
-Implements Circular Ocular FOV Masking to isolate the biological microscope field
-from dark outer vignetting caused by smartphone camera capture.
-Calculates Laplacian variance (blur proxy), Michelson contrast, and SNR strictly inside the circular FOV.
+Optical Quality Assessment Engine for Smartphone-Captured Blood Smears.
+Implements circular microscope Field of View (FOV) masking to isolate biological specimens
+from dark outer vignetting, and computes Laplacian blur variance, Michelson contrast, and SNR.
 """
 
+import logging
+from typing import Dict, Optional, Union
+from pathlib import Path
 import cv2
 import numpy as np
-from typing import Dict, Tuple, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class ImageQualityAssessor:
-    """Computes FOV-masked image quality metrics for smartphone blood smear micrographs."""
+    """Computes physics-grounded optical quality metrics on microscopy micrographs."""
 
     @staticmethod
     def detect_circular_fov_mask(image: np.ndarray) -> np.ndarray:
         """
-        Creates a binary mask (1 inside microscope circle, 0 outside black vignetting)
-        using Otsu thresholding and morphological operations.
+        Creates a binary mask isolating the circular microscope field of view
+        from black outer vignetting caused by mobile phone eyepiece adapters.
         """
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         else:
             gray = image
 
-        # Threshold out pure black background
+        # Threshold out black vignetted borders
         _, mask = cv2.threshold(gray, 15, 255, cv2.THRESH_BINARY)
-        
-        # Morphological closing to fill small gaps inside the circle
+
+        # Morphological ellipse closing and opening to eliminate noise
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-        
+
         return mask
 
     def laplacian_variance(self, image: np.ndarray, mask: Optional[np.ndarray] = None) -> float:
         """
-        Computes Laplacian variance as a focus/blur proxy metric.
-        If mask is provided, computes variance strictly over pixels inside the mask.
+        Computes Laplacian variance (focus/sharpness proxy).
+        Higher values indicate sharp, in-focus cellular structures;
+        lower values indicate optical defocus blur.
         """
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -51,11 +55,14 @@ class ImageQualityAssessor:
             if len(valid_pixels) == 0:
                 return 0.0
             return float(np.var(valid_pixels))
-        
+
         return float(laplacian.var())
 
     def michelson_contrast(self, image: np.ndarray, mask: Optional[np.ndarray] = None) -> float:
-        """Computes Michelson contrast inside the circular FOV mask."""
+        """
+        Computes Michelson contrast: (I_max - I_min) / (I_max + I_min).
+        Evaluated strictly within the illuminated circular FOV.
+        """
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         else:
@@ -73,10 +80,10 @@ class ImageQualityAssessor:
 
         if i_max + i_min == 0:
             return 0.0
-        return (i_max - i_min) / (i_max + i_min)
+        return float((i_max - i_min) / (i_max + i_min))
 
     def signal_to_noise_ratio(self, image: np.ndarray, mask: Optional[np.ndarray] = None) -> float:
-        """Computes SNR (mean / std) inside the circular FOV mask."""
+        """Computes Signal-to-Noise Ratio (mean / std) inside the circular FOV."""
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         else:
@@ -94,20 +101,29 @@ class ImageQualityAssessor:
 
         if std == 0:
             return 0.0
-        return mean / std
+        return float(mean / std)
 
-    def assess_image(self, image_path: str) -> Dict[str, float]:
-        """Loads an image, detects the circular ocular mask, and computes FOV-masked quality proxies."""
-        img = cv2.imread(image_path)
-        if img is None:
-            raise FileNotFoundError(f"Failed to read image at {image_path}")
+    def assess_image(self, image_input: Union[str, Path, np.ndarray]) -> Dict[str, float]:
+        """
+        Loads an image (or accepts an existing ndarray), computes the circular FOV mask,
+        and extracts optical quality metrics.
+        """
+        if isinstance(image_input, (str, Path)):
+            img = cv2.imread(str(image_input))
+            if img is None:
+                raise FileNotFoundError(f"Failed to read image at: {image_input}")
+        elif isinstance(image_input, np.ndarray):
+            img = image_input
+        else:
+            raise TypeError("image_input must be a file path or numpy.ndarray")
 
         mask = self.detect_circular_fov_mask(img)
-        fov_coverage_ratio = float(np.sum(mask > 0) / (img.shape[0] * img.shape[1]))
+        total_pixels = img.shape[0] * img.shape[1]
+        fov_coverage_ratio = float(np.sum(mask > 0) / total_pixels) if total_pixels > 0 else 0.0
 
         return {
-            "blur_laplacian": self.laplacian_variance(img, mask=mask),
-            "michelson_contrast": self.michelson_contrast(img, mask=mask),
-            "snr": self.signal_to_noise_ratio(img, mask=mask),
-            "fov_coverage_ratio": fov_coverage_ratio
+            "blur_laplacian": round(self.laplacian_variance(img, mask=mask), 2),
+            "michelson_contrast": round(self.michelson_contrast(img, mask=mask), 4),
+            "snr": round(self.signal_to_noise_ratio(img, mask=mask), 4),
+            "fov_coverage_ratio": round(fov_coverage_ratio, 4)
         }

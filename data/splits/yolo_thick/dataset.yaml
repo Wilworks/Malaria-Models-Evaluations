@@ -1,0 +1,9 @@
+# WAM-Bench Thick Smear YOLOv8 Fine-Tuning Specification
+path: /Users/wilfredayineasumboya/Desktop/Projects/bcm-projects/Malaria-Models-Evaluations/data/splits/yolo_thick
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: Trophozoite
+  1: WBC

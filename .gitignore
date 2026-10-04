@@ -1,49 +1,51 @@
-# Data directories (raw datasets and heavy downloads - transferred via pendrive)
+# Clinical dataset directories (local storage)
 data/raw/
 data/processed/
 data/quality_metrics/
+data/quarantine_corrupted/
+data/splits/yolo_thick/images/
+data/splits/yolo_thick/labels/
 
-# Evaluation results & cache (to be generated fresh on benchmark machine)
-results/
+# Generated benchmark results & prediction dumps
+results/*
+!results/.gitkeep
 scratch/
 .cache/
 
-# Do NOT commit manuscript folder (per user instruction)
-manuscript/
+# Model weights and external models
+models/external/
+models/finetuned/
+*.pt
+*.tflite
+*.weights
+*.onnx
 
-# Full Android C++ build tree (not needed for Python inference)
-models/external/MalariaScreener_full/
-
-# Local study notes & drafts
-*STUDY_NOTES*.md
-
-# Python virtual environment & cache
-__pycache__/
-*.py[cod]
-*$py.class
+# Python virtual environment & interpreter artifacts
 .venv/
 venv/
 env/
-.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 
-# IDE & OS files
+# Build & packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Testing & quality caches
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# IDE & OS metadata
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# LaTeX build outputs
-manuscript/*.aux
-manuscript/*.log
-manuscript/*.out
-manuscript/*.pdf
-manuscript/*.synctex.gz
-manuscript/*.bbl
-manuscript/*.blg
-manuscript/*.fdb_latexmk
-manuscript/*.fls
-manuscript/page_*.png
-
-# Local study notes & drafts (uncommitted)
+# Manuscript build artifacts
+manuscript/
 *STUDY_NOTES*.md
-manuscript/COMPREHENSIVE_STUDY_NOTES.md
