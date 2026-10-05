@@ -220,7 +220,7 @@ fbononi\_YOLOv8        & Field Bounding Box & 28.23\% [26.2--30.4] & 68.89\% [65
 \end{figure}
 
 \subsection{Multi-Center Geographic Disaggregation}
-Table~\ref{tab:geographic} presents model performance disaggregated by regional clinical center. Across all architectures, severe geographic heterogeneity is evident between coastal urban pediatric facilities (Accra) and inland/Sahelian health centers (Adeleke and Kano).
+Table~\ref{tab:geographic} presents model performance disaggregated by regional clinical center. Across all architectures, severe geographic heterogeneity is evident between coastal urban pediatric facilities (Accra) and inland/Sahelian health centers (Adeleke and Kano), driven by marked differences in smear preparation, cellular pathology, and staining chemistry (visually illustrated in Figure~\ref{fig:qualitative_gallery}).
 
 \begin{table}[htbp]
 \centering
@@ -283,6 +283,13 @@ Thin  & fbononi\_YOLOv8         & 19.95\% / 64.00\% & 34.85\% / 65.96\% & 27.84\
 \includegraphics[width=0.95\linewidth]{figures/fig3_optical_quality_curves.png}
 \caption{Impact of optical focus blur on diagnostic sensitivity. Severe defocus blur impairs visual feature resolution, with sensitivity degrading by up to 23.8\% in thin smear monolayers, demonstrating the critical necessity of an automated pre-inference focus gate.}
 \label{fig:optical_quality_curves}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/fig4_qualitative_gallery.png}
+\caption{Multi-center micrograph morphology, cellular rouleaux pathology, and optical defocus blur failure modes across West African clinical cohorts. (a) PML Accra pediatric thick smear with high-density lysed stroma and ground-truth parasite bounding boxes. (b) Osun primary healthcare center thick smear displaying thicker manual spreading and dark Giemsa precipitation. (c) Kano acute malaria thin smear showing extensive erythrocyte rouleaux stacking. (d) Kano healthy control thin smear showing uniform uninfected biconcave discocyte monolayer. (e) In-focus clinical field ($\sigma^2_{\text{Lap}} = 360.0$) with sharp chromatin resolution. (f) Severe optical defocus blur ($\sigma^2_{\text{Lap}} = 2.1$) completely suppressing parasite ring visibility and demonstrating the mandate for pre-inference hardware quality gating.}
+\label{fig:qualitative_gallery}
 \end{figure}
 
 \subsection{Regional Fine-Tuning: Bridging the Generalization Gap (RQ5)}
