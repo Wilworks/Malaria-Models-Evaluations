@@ -13,6 +13,7 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -119,13 +120,17 @@ def get_transforms():
     return train_transform, eval_transform
 
 
-def evaluate_model(model, loader, device, desc="Evaluating"):
+def evaluate_model(model, loader, device, criterion=None, desc="Evaluating"):
     model.eval()
     all_preds, all_labels = [], []
+    total_loss = 0.0
     with torch.no_grad():
         for images, labels in tqdm(loader, desc=desc, leave=False):
             images = images.to(device)
             outputs = model(images)
+            if criterion is not None:
+                loss = criterion(outputs, labels.to(device))
+                total_loss += loss.item() * len(labels)
             preds = torch.argmax(outputs, dim=1).cpu().numpy()
             all_preds.extend(preds)
             all_labels.extend(labels.numpy())
@@ -143,9 +148,11 @@ def evaluate_model(model, loader, device, desc="Evaluating"):
     spec = (tn / (tn + fp)) * 100 if (tn + fp) > 0 else 0.0
     acc = ((tp + tn) / n) * 100 if n > 0 else 0.0
     f1 = (2 * tp / (2 * tp + fp + fn)) if (2 * tp + fp + fn) > 0 else 0.0
+    avg_loss = (total_loss / n) if (n > 0 and criterion is not None) else None
 
     return {
         "n": n, "tp": tp, "fp": fp, "tn": tn, "fn": fn,
+        "loss": round(avg_loss, 4) if avg_loss is not None else None,
         "sensitivity": round(sens, 2),
         "sens_95ci": wilson_ci(tp, tp + fn),
         "specificity": round(spec, 2),
@@ -153,6 +160,66 @@ def evaluate_model(model, loader, device, desc="Evaluating"):
         "accuracy": round(acc, 2),
         "f1_score": round(f1, 4)
     }
+
+
+def plot_history(history, save_path, title):
+    """Generates a 4-panel publication-grade training convergence chart."""
+    df_hist = pd.DataFrame(history)
+    epochs = df_hist["epoch"]
+
+    fig, axes = plt.subplots(2, 2, figsize=(13, 8), dpi=300)
+    plt.subplots_adjust(hspace=0.28, wspace=0.22)
+
+    # Panel 1: Loss Convergence
+    ax = axes[0, 0]
+    ax.plot(epochs, df_hist["train_loss"], label="Train Loss", color="#1f77b4", lw=2, marker='o', markersize=3)
+    if "val_loss" in df_hist and df_hist["val_loss"].notna().any():
+        ax.plot(epochs, df_hist["val_loss"], label="Val Loss", color="#d62728", lw=2, linestyle="--", marker='s', markersize=3)
+    ax.set_title("Cross-Entropy Loss Convergence", fontsize=11, fontweight="bold")
+    ax.set_xlabel("Epoch", fontsize=10)
+    ax.set_ylabel("Loss", fontsize=10)
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend(frameon=True, fontsize=9)
+
+    # Panel 2: Clinical Sensitivity & Specificity vs WHO 90%
+    ax = axes[0, 1]
+    ax.plot(epochs, df_hist["val_sensitivity"], label="Val Sensitivity", color="#2ca02c", lw=2, marker='^', markersize=3)
+    ax.plot(epochs, df_hist["val_specificity"], label="Val Specificity", color="#ff7f0e", lw=2, marker='v', markersize=3)
+    ax.axhline(90.0, color="#d62728", linestyle=":", lw=1.5, label="WHO Level-1 Benchmark (90%)")
+    ax.set_title("Clinical Sensitivity & Specificity Dynamics", fontsize=11, fontweight="bold")
+    ax.set_xlabel("Epoch", fontsize=10)
+    ax.set_ylabel("Metric (%)", fontsize=10)
+    min_val = min(df_hist["val_sensitivity"].min(), df_hist["val_specificity"].min())
+    ax.set_ylim(bottom=max(0, min_val - 10), top=102)
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend(frameon=True, fontsize=9, loc="lower right")
+
+    # Panel 3: F1-Score & Accuracy
+    ax = axes[1, 0]
+    ax.plot(epochs, df_hist["val_f1"], label="Val F1-Score", color="#9467bd", lw=2, marker='o', markersize=3)
+    ax.plot(epochs, df_hist["val_accuracy"] / 100.0, label="Val Accuracy", color="#8c564b", lw=2, linestyle="--", marker='x', markersize=3)
+    ax.set_title("Validation F1-Score & Accuracy", fontsize=11, fontweight="bold")
+    ax.set_xlabel("Epoch", fontsize=10)
+    ax.set_ylabel("Score [0, 1]", fontsize=10)
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend(frameon=True, fontsize=9, loc="lower right")
+
+    # Panel 4: Learning Rate Schedule
+    ax = axes[1, 1]
+    ax.plot(epochs, df_hist["lr"], label="Learning Rate (Cosine Annealing)", color="#17becf", lw=2)
+    ax.set_title("Learning Rate Decay Schedule", fontsize=11, fontweight="bold")
+    ax.set_xlabel("Epoch", fontsize=10)
+    ax.set_ylabel("Learning Rate", fontsize=10)
+    ax.set_yscale("log")
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend(frameon=True, fontsize=9)
+
+    fig.suptitle(title, fontsize=13, fontweight="bold", y=0.98)
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(save_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[Plot Saved] Convergence curves exported to: {save_path}")
 
 
 def main():
@@ -241,6 +308,7 @@ def main():
 
     best_val_f1 = 0.0
     best_checkpoint = save_dir / "best_model.pth"
+    history = []
 
     for epoch in range(1, args.epochs + 1):
         model.train()
@@ -260,13 +328,25 @@ def main():
             running_loss += batch_loss * len(labels)
             pbar.set_postfix({"batch_loss": f"{batch_loss:.4f}"})
 
+        current_lr = optimizer.param_groups[0]["lr"]
         scheduler.step()
         epoch_loss = running_loss / len(df_train)
-        val_metrics = evaluate_model(model, val_loader, device, desc=f"Val Epoch {epoch:02d}")
+        val_metrics = evaluate_model(model, val_loader, device, criterion=criterion, desc=f"Val Epoch {epoch:02d}")
 
-        print(f"Epoch [{epoch:02d}/{args.epochs:02d}] Loss: {epoch_loss:.4f} | "
+        print(f"Epoch [{epoch:02d}/{args.epochs:02d}] Train Loss: {epoch_loss:.4f} | Val Loss: {val_metrics['loss']} | "
               f"Val Sens: {val_metrics['sensitivity']:.1f}% | Val Spec: {val_metrics['specificity']:.1f}% | "
               f"Val F1: {val_metrics['f1_score']:.4f}")
+
+        history.append({
+            "epoch": epoch,
+            "train_loss": round(epoch_loss, 4),
+            "val_loss": val_metrics["loss"],
+            "val_sensitivity": val_metrics["sensitivity"],
+            "val_specificity": val_metrics["specificity"],
+            "val_accuracy": val_metrics["accuracy"],
+            "val_f1": val_metrics["f1_score"],
+            "lr": current_lr
+        })
 
         if val_metrics["f1_score"] >= best_val_f1:
             best_val_f1 = val_metrics["f1_score"]
@@ -279,6 +359,7 @@ def main():
     test_metrics["modality"] = args.modality
     test_metrics["architecture"] = "MobileNetV2"
     test_metrics["strategy"] = mode_slug
+    test_metrics["history"] = history
 
     print(f"\n[Held-Out Test Results - {args.modality.upper()} SMEARS ({mode_name})]")
     print(f"  Sensitivity : {test_metrics['sensitivity']:.2f}% (95% CI: {test_metrics['sens_95ci']})")
@@ -290,7 +371,16 @@ def main():
     metrics_out = RESULTS_DIR / f"mobilenet_{args.modality}_{mode_slug}_metrics.json"
     with open(metrics_out, "w") as f:
         json.dump(test_metrics, f, indent=2)
-    print(f"[Saved] Test metrics exported to: {metrics_out}\n")
+    print(f"[Saved] Test metrics and history exported to: {metrics_out}")
+
+    hist_csv = RESULTS_DIR / f"mobilenet_{args.modality}_{mode_slug}_history.csv"
+    pd.DataFrame(history).to_csv(hist_csv, index=False)
+    print(f"[Saved] Training history CSV exported to: {hist_csv}")
+
+    plot_title = f"MobileNetV2 Training Convergence: {args.modality.upper()} Smears ({mode_name})"
+    plot_history(history, RESULTS_DIR / f"mobilenet_{args.modality}_{mode_slug}_curves.png", plot_title)
+    plot_history(history, save_dir / "training_curves.png", plot_title)
+    print("")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,90 @@
+{
+  "MalariaScreener_Sudan_thick": {
+    "verdict": "FAIL: Unsafe for Autonomous Clinical Deployment",
+    "risk_level": "SEVERE",
+    "clinical_implication": "Model exhibits pervasive cross-domain diagnostic degradation across both positive and negative cases.",
+    "sensitivity_measured": 0.6388,
+    "sensitivity_required": 0.95,
+    "sensitivity_pass": false,
+    "specificity_measured": 0.5569,
+    "specificity_required": 0.9,
+    "specificity_pass": false
+  },
+  "MalariaScreener_Thick_thick": {
+    "verdict": "FAIL: Unsafe for Autonomous Clinical Deployment",
+    "risk_level": "SEVERE",
+    "clinical_implication": "Model exhibits pervasive cross-domain diagnostic degradation across both positive and negative cases.",
+    "sensitivity_measured": 0.3029,
+    "sensitivity_required": 0.95,
+    "sensitivity_pass": false,
+    "specificity_measured": 0.8318,
+    "specificity_required": 0.9,
+    "specificity_pass": false
+  },
+  "MalariaScreener_Thin_thick": {
+    "verdict": "FAIL: Critical False-Negative Risk",
+    "risk_level": "CRITICAL",
+    "clinical_implication": "Unacceptable missed infections; patients with active parasitemia will go untreated.",
+    "sensitivity_measured": 0.2126,
+    "sensitivity_required": 0.95,
+    "sensitivity_pass": false,
+    "specificity_measured": 0.9882,
+    "specificity_required": 0.9,
+    "specificity_pass": true
+  },
+  "fbononibelloepoch_YOLOv8_thick": {
+    "verdict": "FAIL: Critical False-Negative Risk",
+    "risk_level": "CRITICAL",
+    "clinical_implication": "Unacceptable missed infections; patients with active parasitemia will go untreated.",
+    "sensitivity_measured": 0.4713,
+    "sensitivity_required": 0.95,
+    "sensitivity_pass": false,
+    "specificity_measured": 0.9692,
+    "specificity_required": 0.9,
+    "specificity_pass": true
+  },
+  "MalariaScreener_Sudan_thin": {
+    "verdict": "FAIL: Unsafe for Autonomous Clinical Deployment",
+    "risk_level": "SEVERE",
+    "clinical_implication": "Model exhibits pervasive cross-domain diagnostic degradation across both positive and negative cases.",
+    "sensitivity_measured": 0.5364,
+    "sensitivity_required": 0.95,
+    "sensitivity_pass": false,
+    "specificity_measured": 0.4374,
+    "specificity_required": 0.9,
+    "specificity_pass": false
+  },
+  "MalariaScreener_Thick_thin": {
+    "verdict": "FAIL: Critical False-Negative Risk",
+    "risk_level": "CRITICAL",
+    "clinical_implication": "Unacceptable missed infections; patients with active parasitemia will go untreated.",
+    "sensitivity_measured": 0.1686,
+    "sensitivity_required": 0.95,
+    "sensitivity_pass": false,
+    "specificity_measured": 0.9368,
+    "specificity_required": 0.9,
+    "specificity_pass": true
+  },
+  "MalariaScreener_Thin_thin": {
+    "verdict": "FAIL: Unsafe for Autonomous Clinical Deployment",
+    "risk_level": "SEVERE",
+    "clinical_implication": "Model exhibits pervasive cross-domain diagnostic degradation across both positive and negative cases.",
+    "sensitivity_measured": 0.2027,
+    "sensitivity_required": 0.95,
+    "sensitivity_pass": false,
+    "specificity_measured": 0.5796,
+    "specificity_required": 0.9,
+    "specificity_pass": false
+  },
+  "fbononibelloepoch_YOLOv8_thin": {
+    "verdict": "FAIL: Unsafe for Autonomous Clinical Deployment",
+    "risk_level": "SEVERE",
+    "clinical_implication": "Model exhibits pervasive cross-domain diagnostic degradation across both positive and negative cases.",
+    "sensitivity_measured": 0.2823,
+    "sensitivity_required": 0.95,
+    "sensitivity_pass": false,
+    "specificity_measured": 0.6889,
+    "specificity_required": 0.9,
+    "specificity_pass": false
+  }
+}

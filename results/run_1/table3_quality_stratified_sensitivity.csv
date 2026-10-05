@@ -1,0 +1,25 @@
+smear_type,model_name,quality_strata,n_samples,mean_blur_laplacian,mean_contrast,mean_confidence,sensitivity,specificity,tp,fn,fp,tn
+thick,MalariaScreener_Sudan,Low Quality,1727,8.18,0.9371,0.921,68.05,60.87,1144,537,18,28
+thick,MalariaScreener_Sudan,Medium Quality,1511,18.29,0.9231,0.9249,60.59,51.55,798,519,94,100
+thick,MalariaScreener_Sudan,High Quality,664,40.39,0.8857,0.9118,58.3,58.79,281,201,75,107
+thick,MalariaScreener_Thick,Low Quality,1727,8.18,0.9371,0.9251,33.08,69.57,556,1125,14,32
+thick,MalariaScreener_Thick,Medium Quality,1511,18.29,0.9231,0.9354,35.16,87.63,463,854,24,170
+thick,MalariaScreener_Thick,High Quality,664,40.39,0.8857,0.9146,7.26,81.87,35,447,33,149
+thick,MalariaScreener_Thin,Low Quality,1727,8.18,0.9371,0.8725,28.61,95.65,481,1200,2,44
+thick,MalariaScreener_Thin,Medium Quality,1511,18.29,0.9231,0.9165,15.79,98.97,208,1109,2,192
+thick,MalariaScreener_Thin,High Quality,664,40.39,0.8857,0.9389,10.58,99.45,51,431,1,181
+thick,fbononibelloepoch_YOLOv8,Low Quality,1727,8.18,0.9371,0.7087,48.42,97.83,814,867,1,45
+thick,fbononibelloepoch_YOLOv8,Medium Quality,1511,18.29,0.9231,0.7669,43.28,95.36,570,747,9,185
+thick,fbononibelloepoch_YOLOv8,High Quality,664,40.39,0.8857,0.7667,53.11,98.35,256,226,3,179
+thin,MalariaScreener_Sudan,Low Quality,426,9.04,0.9571,0.9244,75.06,20.0,301,100,20,5
+thin,MalariaScreener_Sudan,Medium Quality,642,16.77,0.9809,0.9235,75.0,18.09,411,137,77,17
+thin,MalariaScreener_Sudan,High Quality,1487,105.12,0.9975,0.7885,27.71,48.01,217,566,366,338
+thin,MalariaScreener_Thick,Low Quality,426,9.04,0.9571,0.9219,36.41,72.0,146,255,7,18
+thin,MalariaScreener_Thick,Medium Quality,642,16.77,0.9809,0.9469,23.36,85.11,128,420,14,80
+thin,MalariaScreener_Thick,High Quality,1487,105.12,0.9975,0.9718,2.3,95.6,18,765,31,673
+thin,MalariaScreener_Thin,Low Quality,426,9.04,0.9571,0.8577,28.43,60.0,114,287,10,15
+thin,MalariaScreener_Thin,Medium Quality,642,16.77,0.9809,0.8922,23.18,37.23,127,421,59,35
+thin,MalariaScreener_Thin,High Quality,1487,105.12,0.9975,0.8548,14.05,60.65,110,673,277,427
+thin,fbononibelloepoch_YOLOv8,Low Quality,426,9.04,0.9571,0.8622,19.95,64.0,80,321,9,16
+thin,fbononibelloepoch_YOLOv8,Medium Quality,642,16.77,0.9809,0.7714,34.85,65.96,191,357,32,62
+thin,fbononibelloepoch_YOLOv8,High Quality,1487,105.12,0.9975,0.7938,27.84,69.46,218,565,215,489

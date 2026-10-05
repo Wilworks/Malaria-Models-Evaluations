@@ -26,7 +26,9 @@ def parse_args():
     parser.add_argument("--imgsz", type=int, default=640, help="Image resolution (default: 640)")
     parser.add_argument("--lr0", type=float, default=0.001, help="Initial learning rate (default: 0.001)")
     parser.add_argument("--patience", type=int, default=10, help="Early stopping patience (default: 10)")
-    parser.add_argument("--workers", type=int, default=4, help="Dataloader workers (default: 4)")
+    parser.add_argument("--workers", type=int, default=0, help="Dataloader workers (default: 0 for MPS stability)")
+    parser.add_argument("--freeze", type=int, default=None, help="Number of backbone layers to freeze for PELP (e.g. 10 for backbone, default: None)")
+    parser.add_argument("--name", type=str, default="yolo_thick_run", help="Run name (default: yolo_thick_run)")
     return parser.parse_args()
 
 
@@ -78,18 +80,33 @@ def evaluate_test_set(model, test_images_dir, conf_threshold=0.25):
         elif gt_label == 1 and pred_label == 0:
             fn += 1
 
+    import numpy as np
+
+    def wilson_ci(k, n, z=1.96):
+        if n == 0:
+            return [0.0, 0.0]
+        p = k / n
+        denom = 1 + z**2 / n
+        centre = (p + z**2 / (2 * n)) / denom
+        diff = z * np.sqrt((p * (1 - p) / n) + (z**2 / (4 * n**2))) / denom
+        return [round(max(0.0, centre - diff) * 100, 1), round(min(1.0, centre + diff) * 100, 1)]
+
     total = tp + fp + tn + fn
     sensitivity = (tp / (tp + fn)) * 100 if (tp + fn) > 0 else 0.0
     specificity = (tn / (tn + fp)) * 100 if (tn + fp) > 0 else 0.0
     precision = (tp / (tp + fp)) * 100 if (tp + fp) > 0 else 0.0
     accuracy = ((tp + tn) / total) * 100 if total > 0 else 0.0
     f1 = (2 * tp / (2 * tp + fp + fn)) if (2 * tp + fp + fn) > 0 else 0.0
+    sens_ci = wilson_ci(tp, tp + fn)
+    spec_ci = wilson_ci(tn, tn + fp)
 
     metrics = {
         "total_test_samples": total,
         "tp": tp, "fp": fp, "tn": tn, "fn": fn,
         "sensitivity_pct": round(sensitivity, 2),
+        "sens_95ci": sens_ci,
         "specificity_pct": round(specificity, 2),
+        "spec_95ci": spec_ci,
         "precision_pct": round(precision, 2),
         "accuracy_pct": round(accuracy, 2),
         "f1_score": round(f1, 4),
@@ -99,8 +116,8 @@ def evaluate_test_set(model, test_images_dir, conf_threshold=0.25):
     print(f"\n[Test Set Results - Slide Level Classification]")
     print(f"  Total Test Micrographs: {total}")
     print(f"  TP: {tp} | FP: {fp} | TN: {tn} | FN: {fn}")
-    print(f"  Sensitivity : {sensitivity:.2f}%")
-    print(f"  Specificity : {specificity:.2f}%")
+    print(f"  Sensitivity : {sensitivity:.2f}% (95% CI: {sens_ci})")
+    print(f"  Specificity : {specificity:.2f}% (95% CI: {spec_ci})")
     print(f"  Accuracy    : {accuracy:.2f}%")
     print(f"  F1-Score    : {f1:.4f}")
     print("=" * 60)
@@ -131,7 +148,7 @@ def main():
     model = YOLO(str(BASE_MODEL_PATH))
 
     # Fine-tune model
-    results = model.train(
+    train_kwargs = dict(
         data=str(DATASET_YAML),
         epochs=args.epochs,
         batch=args.batch,
@@ -141,15 +158,20 @@ def main():
         device=device,
         workers=args.workers,
         project=str(OUTPUT_DIR),
-        name="run_wam_thick",
+        name=args.name,
         exist_ok=True,
         save=True,
         plots=True,
         verbose=True
     )
+    if args.freeze is not None:
+        train_kwargs["freeze"] = args.freeze
+        print(f"[PELP Probing Mode] Freezing first {args.freeze} layers (backbone features preserved).")
+
+    results = model.train(**train_kwargs)
 
     # Load best checkpoint for test set evaluation
-    best_weights = OUTPUT_DIR / "run_wam_thick" / "weights" / "best.pt"
+    best_weights = OUTPUT_DIR / args.name / "weights" / "best.pt"
     if best_weights.exists():
         print(f"\n[Success] Loading best fine-tuned weights from: {best_weights}")
         best_model = YOLO(str(best_weights))
@@ -158,9 +180,35 @@ def main():
 
     test_imgs_dir = ROOT / "data" / "splits" / "yolo_thick" / "images" / "test"
     metrics = evaluate_test_set(best_model, test_imgs_dir)
+    metrics["architecture"] = "YOLO11s"
+    metrics["strategy"] = args.name
+    metrics["frozen_layers"] = args.freeze
+
+    # Copy and parse training history and plots to results directory
+    yolo_run_dir = OUTPUT_DIR / args.name
+    src_csv = yolo_run_dir / "results.csv"
+    src_png = yolo_run_dir / "results.png"
+    if src_csv.exists():
+        import shutil
+        import pandas as pd
+        dest_csv = RESULTS_DIR / f"{args.name}_history.csv"
+        shutil.copy(src_csv, dest_csv)
+        print(f"[Saved] YOLO training history CSV copied to: {dest_csv}")
+        try:
+            df_yolo = pd.read_csv(src_csv)
+            df_yolo.columns = [c.strip() for c in df_yolo.columns]
+            metrics["history"] = df_yolo.to_dict(orient="records")
+        except Exception as e:
+            print(f"[Warning] Could not parse YOLO results.csv: {e}")
+
+    if src_png.exists():
+        import shutil
+        dest_png = RESULTS_DIR / f"{args.name}_curves.png"
+        shutil.copy(src_png, dest_png)
+        print(f"[Saved] YOLO convergence curves copied to: {dest_png}")
 
     # Save metrics JSON
-    metrics_path = RESULTS_DIR / "yolo_thick_finetune_metrics.json"
+    metrics_path = RESULTS_DIR / f"{args.name}_metrics.json"
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=2)
     print(f"[Saved] Test evaluation metrics saved to: {metrics_path}\n")

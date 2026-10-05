@@ -1,0 +1,25 @@
+Modality,Data_Source,Model,N,TP,FP,TN,FN,Sensitivity (%),Sens_95CI,Specificity (%),Spec_95CI,F1_Score,Accuracy (%),Clinical_Safety
+Thick,Pooled (All West Africa),MalariaScreener_Sudan,3902,2223,187,235,1257,63.88,[62.3-65.5],55.69,[50.9-60.4],0.7548,62.99,SEVERE
+Thick,adeleke_nigeria,MalariaScreener_Sudan,859,194,177,234,254,43.3,[38.8-47.9],56.93,[52.1-61.6],0.4737,49.83,SEVERE
+Thick,lacuna_ghana,MalariaScreener_Sudan,3043,2029,10,1,1003,66.92,[65.2-68.6],9.09,[1.6-37.7],0.8002,66.71,SEVERE
+Thick,Pooled (All West Africa),MalariaScreener_Thick,3902,1054,71,351,2426,30.29,[28.8-31.8],83.18,[79.3-86.4],0.4578,36.01,SEVERE
+Thick,adeleke_nigeria,MalariaScreener_Thick,859,43,65,346,405,9.6,[7.2-12.7],84.18,[80.3-87.4],0.1547,45.29,SEVERE
+Thick,lacuna_ghana,MalariaScreener_Thick,3043,1011,6,5,2021,33.34,[31.7-35.0],45.45,[21.3-72.0],0.4994,33.39,SEVERE
+Thick,Pooled (All West Africa),MalariaScreener_Thin,3902,740,5,417,2740,21.26,[19.9-22.7],98.82,[97.3-99.5],0.3503,29.65,CRITICAL
+Thick,adeleke_nigeria,MalariaScreener_Thin,859,4,2,409,444,0.89,[0.4-2.3],99.51,[98.2-99.9],0.0176,48.08,CRITICAL
+Thick,lacuna_ghana,MalariaScreener_Thin,3043,736,3,8,2296,24.27,[22.8-25.8],72.73,[43.4-90.2],0.3903,24.45,SEVERE
+Thick,Pooled (All West Africa),fbononibelloepoch_YOLOv8,3902,1640,13,409,1840,47.13,[45.5-48.8],96.92,[94.8-98.2],0.639,52.51,CRITICAL
+Thick,adeleke_nigeria,fbononibelloepoch_YOLOv8,859,89,10,401,359,19.87,[16.4-23.8],97.57,[95.6-98.7],0.3254,57.04,CRITICAL
+Thick,lacuna_ghana,fbononibelloepoch_YOLOv8,3043,1551,3,8,1481,51.15,[49.4-52.9],72.73,[43.4-90.2],0.6764,51.23,SEVERE
+Thin,Pooled (All West Africa),MalariaScreener_Sudan,2555,929,463,360,803,53.64,[51.3-56.0],43.74,[40.4-47.1],0.5948,50.45,SEVERE
+Thin,lacuna_ghana,MalariaScreener_Sudan,1011,705,21,30,255,73.44,[70.5-76.1],58.82,[45.2-71.2],0.8363,72.7,SEVERE
+Thin,muhammad_kano_nigeria,MalariaScreener_Sudan,1544,224,442,330,548,29.02,[25.9-32.3],42.75,[39.3-46.3],0.3115,35.88,SEVERE
+Thin,Pooled (All West Africa),MalariaScreener_Thick,2555,292,52,771,1440,16.86,[15.2-18.7],93.68,[91.8-95.2],0.2813,41.6,CRITICAL
+Thin,lacuna_ghana,MalariaScreener_Thick,1011,284,16,35,676,29.58,[26.8-32.6],68.63,[55.0-79.7],0.4508,31.55,SEVERE
+Thin,muhammad_kano_nigeria,MalariaScreener_Thick,1544,8,36,736,764,1.04,[0.5-2.0],95.34,[93.6-96.6],0.0196,48.19,CRITICAL
+Thin,Pooled (All West Africa),MalariaScreener_Thin,2555,351,346,477,1381,20.27,[18.4-22.2],57.96,[54.6-61.3],0.289,32.41,SEVERE
+Thin,lacuna_ghana,MalariaScreener_Thin,1011,251,6,45,709,26.15,[23.5-29.0],88.24,[76.6-94.5],0.4125,29.28,SEVERE
+Thin,muhammad_kano_nigeria,MalariaScreener_Thin,1544,100,340,432,672,12.95,[10.8-15.5],55.96,[52.4-59.4],0.165,34.46,SEVERE
+Thin,Pooled (All West Africa),fbononibelloepoch_YOLOv8,2555,489,256,567,1243,28.23,[26.2-30.4],68.89,[65.6-72.0],0.3948,41.33,SEVERE
+Thin,lacuna_ghana,fbononibelloepoch_YOLOv8,1011,276,8,43,684,28.75,[26.0-31.7],84.31,[72.0-91.8],0.4437,31.55,SEVERE
+Thin,muhammad_kano_nigeria,fbononibelloepoch_YOLOv8,1544,213,248,524,559,27.59,[24.6-30.9],67.88,[64.5-71.1],0.3455,47.73,SEVERE

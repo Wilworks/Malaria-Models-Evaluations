@@ -105,10 +105,10 @@ for idx, (modality, ax) in enumerate([("Thick", ax1), ("Thin", ax2)]):
     ax.set_ylabel("Diagnostic Metric (%)" if idx == 0 else "", fontsize=11.5)
     ax.set_xticks(x)
     ax.set_xticklabels([labels.get(m, m) for m in models], fontsize=10.0)
-    ax.set_ylim(0, 105)
+    ax.set_ylim(0, 120)  # Generous headroom so legend never touches bars
     ax.grid(axis="y", linestyle=":", alpha=0.6)
     if idx == 0:
-        ax.legend(frameon=True, fontsize=10, loc="upper right")
+        ax.legend(frameon=True, fontsize=9.5, loc="upper right", framealpha=0.95)
 
 plt.suptitle("Zero-Shot Cross-Domain Clinical Evaluation vs. WHO Level-1 Triage Benchmark",
              fontsize=13.5, fontweight="bold", y=0.98)
@@ -142,9 +142,10 @@ for model in ["MalariaScreener_Sudan", "MalariaScreener_Thick", "fbononibelloepo
 
 ax1.set_title("Thick Smears: Focus Blur vs. Sensitivity", fontsize=12.5, fontweight="bold", pad=10)
 ax1.set_ylabel("Diagnostic Sensitivity (%)", fontsize=11.5)
-ax1.set_ylim(0, 100)
+ax1.set_ylim(0, 105)
 ax1.grid(True, linestyle=":", alpha=0.6)
-ax1.legend(frameon=True, fontsize=10, loc="lower right")
+# Upper right has zero curves for thick smears (all curves < 60% at high focus)
+ax1.legend(frameon=True, fontsize=10, loc="upper right", framealpha=0.95)
 
 # Thin Smear
 for model in ["MalariaScreener_Sudan", "MalariaScreener_Thin", "fbononibelloepoch_YOLOv8"]:
@@ -154,9 +155,10 @@ for model in ["MalariaScreener_Sudan", "MalariaScreener_Thin", "fbononibelloepoc
              label=labels.get(model, model).split("\n")[0], color=colors.get(model, "#333"))
 
 ax2.set_title("Thin Smears: Focus Blur vs. Sensitivity", fontsize=12.5, fontweight="bold", pad=10)
-ax2.set_ylim(0, 100)
+ax2.set_ylim(0, 105)
 ax2.grid(True, linestyle=":", alpha=0.6)
-ax2.legend(frameon=True, fontsize=10, loc="lower right")
+# Upper right has zero curves for thin smears (all curves < 30% at high focus)
+ax2.legend(frameon=True, fontsize=10, loc="upper right", framealpha=0.95)
 
 plt.suptitle("Impact of Laplacian Optical Focus Blur on Diagnostic Sensitivity",
              fontsize=13.5, fontweight="bold", y=0.98)

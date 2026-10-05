@@ -1,0 +1,10 @@
+{
+  "run_id": 1,
+  "timestamp": "2026-10-04T04:29:28Z",
+  "elapsed_seconds": 2182.29,
+  "checksums": {
+    "table1_master_diagnostic_performance.csv": "84dfefe059b65e3080632d992604d4c46ad665156f5ab3d126d9a692ccf99982",
+    "table3_quality_stratified_sensitivity.csv": "b02e5e582c08952d2f500fa4ff1ebee1668effe35f6b117594b048c637e6e709",
+    "predictions_manifest.csv": "aa44962b95bf1324489ca57f362150c91018f032a5df852bc308e257c40423d3"
+  }
+}
