@@ -8,6 +8,7 @@ class-balanced cross entropy loss, and Wilson Score 95% CI evaluation on held-ou
 import sys
 import json
 import argparse
+import ssl
 from pathlib import Path
 from PIL import Image
 import numpy as np
@@ -17,6 +18,13 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import models, transforms
 from tqdm import tqdm
+
+# Fix macOS Python certificate verification issue when downloading torchvision weights
+try:
+    import certifi
+    ssl._create_default_https_context = ssl._create_unverified_context
+except Exception:
+    ssl._create_default_https_context = ssl._create_unverified_context
 
 ROOT = Path("/Users/wilfredayineasumboya/Desktop/Projects/bcm-projects/Malaria-Models-Evaluations")
 SPLITS_CSV = ROOT / "data" / "splits" / "classification_splits.csv"
@@ -28,11 +36,14 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune MobileNetV2 classifier.")
     parser.add_argument("--modality", type=str, choices=["thick", "thin"], default="thick",
                         help="Smear modality to train on: 'thick' or 'thin' (default: thick)")
-    parser.add_argument("--epochs", type=int, default=25, help="Number of epochs (default: 25)")
+    parser.add_argument("--epochs", type=int, default=30, help="Number of epochs (default: 30)")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size (default: 32)")
-    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate (default: 0.0001)")
+    parser.add_argument("--lr", type=float, default=None,
+                        help="Learning rate (default: 1e-3 for linear probe, 1e-4 for full fine-tuning)")
     parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay (default: 1e-4)")
     parser.add_argument("--num-workers", type=int, default=4, help="Dataloader workers (default: 4)")
+    parser.add_argument("--freeze-backbone", action="store_true",
+                        help="Freeze backbone feature extractor for parameter-efficient linear probing (train classification head only).")
     return parser.parse_args()
 
 
@@ -149,7 +160,10 @@ def main():
     if not SPLITS_CSV.exists():
         sys.exit(f"[Error] Manifest not found at {SPLITS_CSV}. Run scripts/create_finetune_dataset_splits.py first.")
 
-    save_dir = OUTPUT_DIR / f"mobilenet_{args.modality}"
+    mode_name = "Linear Probing (Frozen Backbone)" if args.freeze_backbone else "Full End-to-End Fine-Tuning"
+    mode_slug = "linear_probe" if args.freeze_backbone else "full_finetune"
+
+    save_dir = OUTPUT_DIR / f"mobilenet_{args.modality}_{mode_slug}"
     save_dir.mkdir(parents=True, exist_ok=True)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -162,6 +176,7 @@ def main():
 
     print("\n" + "=" * 65)
     print(f"WAM-Bench MobileNetV2 Fine-Tuning Pipeline [{args.modality.upper()} SMEARS]")
+    print(f"  Strategy          : {mode_name}")
     print(f"  Training cohort   : {len(df_train)} micrographs")
     print(f"  Validation cohort : {len(df_val)} micrographs")
     print(f"  Held-out test set : {len(df_test)} micrographs")
@@ -184,11 +199,22 @@ def main():
 
     # Load MobileNetV2
     model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT)
+
+    if args.freeze_backbone:
+        for param in model.features.parameters():
+            param.requires_grad = False
+        print(f"[{mode_name}] Feature extractor backbone frozen (parameter-efficient).")
+    else:
+        print(f"[{mode_name}] Full network trainable.")
+
     in_features = model.classifier[1].in_features
     model.classifier[1] = nn.Linear(in_features, 2)
     model = model.to(device)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    lr = args.lr if args.lr is not None else (1e-3 if args.freeze_backbone else 1e-4)
+    print(f"[{mode_name}] Using learning rate: {lr:.1e} across {args.epochs} epochs.")
+    trainable_params = [p for p in model.parameters() if p.requires_grad]
+    optimizer = torch.optim.AdamW(trainable_params, lr=lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
     best_val_f1 = 0.0
@@ -230,15 +256,16 @@ def main():
     test_metrics = evaluate_model(model, test_loader, device, desc="Testing")
     test_metrics["modality"] = args.modality
     test_metrics["architecture"] = "MobileNetV2"
+    test_metrics["strategy"] = mode_slug
 
-    print(f"\n[Held-Out Test Results - {args.modality.upper()} SMEARS]")
+    print(f"\n[Held-Out Test Results - {args.modality.upper()} SMEARS ({mode_name})]")
     print(f"  Sensitivity : {test_metrics['sensitivity']:.2f}% (95% CI: {test_metrics['sens_95ci']})")
     print(f"  Specificity : {test_metrics['specificity']:.2f}% (95% CI: {test_metrics['spec_95ci']})")
     print(f"  Accuracy    : {test_metrics['accuracy']:.2f}%")
     print(f"  F1-Score    : {test_metrics['f1_score']:.4f}")
     print("=" * 65)
 
-    metrics_out = RESULTS_DIR / f"mobilenet_{args.modality}_finetune_metrics.json"
+    metrics_out = RESULTS_DIR / f"mobilenet_{args.modality}_{mode_slug}_metrics.json"
     with open(metrics_out, "w") as f:
         json.dump(test_metrics, f, indent=2)
     print(f"[Saved] Test metrics exported to: {metrics_out}\n")
