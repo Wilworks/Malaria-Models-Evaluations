@@ -9,6 +9,11 @@ data/splits/yolo_thick/labels/
 # Generated benchmark results & prediction dumps
 results/*
 !results/.gitkeep
+!results/finetuning/
+!results/figures/
+!results/run_1/
+!results/**/*.json
+!results/**/*.csv
 scratch/
 .cache/
 

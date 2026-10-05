@@ -311,7 +311,7 @@ MalariaScreener-Thick & Factory Frozen Edge Binary & 30.29\% [28.8--31.8] & 83.1
 fbononi-YOLOv8        & Factory PyTorch Checkpoint  & 47.13\% [45.5--48.8] & 96.92\% [94.8--98.2] & 0.6390 & --- & Fail ($<90\%$) \\
 \midrule
 \multicolumn{7}{l}{\textit{\textbf{Tier 1: Parameter-Efficient Linear Probing (PELP, Frozen Backbone, 30 Epochs)}}} \\
-MobileNetV2 (Loss-Weighted)  & Frozen Backbone + Class Weights & \textit{[In Progress: $\approx 90.2\%$]} & \textit{[In Progress: $\approx 85.9\%$]} & \textit{[In Progress: $\approx 0.940$]} & \textit{[Pending]} & \textit{[Evaluating]} \\
+MobileNetV2 (Loss-Weighted)  & Frozen Backbone + Class Weights & 92.15\% [89.5--94.2] & 93.55\% [84.6--97.5] & 0.9553 & +0.2005 & \textbf{Pass ($\ge 90\%$)} \\
 MobileNetV2 ($D_4$-Augmented) & Frozen Backbone + $D_4$ Balanced & \textit{[Pending D4]} & \textit{[Pending D4]} & \textit{[Pending D4]} & \textit{[Pending]} & \textit{[Evaluating]} \\
 \midrule
 \multicolumn{7}{l}{\textit{\textbf{Tier 2: Full End-to-End Network Retraining (Unfrozen Convolutional Backbones)}}} \\

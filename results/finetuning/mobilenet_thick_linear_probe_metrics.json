@@ -1,0 +1,22 @@
+{
+  "n": 584,
+  "tp": 481,
+  "fp": 4,
+  "tn": 58,
+  "fn": 41,
+  "sensitivity": 92.15,
+  "sens_95ci": [
+    89.5,
+    94.2
+  ],
+  "specificity": 93.55,
+  "spec_95ci": [
+    84.6,
+    97.5
+  ],
+  "accuracy": 92.29,
+  "f1_score": 0.9553,
+  "modality": "thick",
+  "architecture": "MobileNetV2",
+  "strategy": "linear_probe"
+}
