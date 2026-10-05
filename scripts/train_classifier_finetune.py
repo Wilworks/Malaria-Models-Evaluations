@@ -44,6 +44,8 @@ def parse_args():
     parser.add_argument("--num-workers", type=int, default=4, help="Dataloader workers (default: 4)")
     parser.add_argument("--freeze-backbone", action="store_true",
                         help="Freeze backbone feature extractor for parameter-efficient linear probing (train classification head only).")
+    parser.add_argument("--use-d4", action="store_true",
+                        help="Train on explicit D4 dihedral augmented balanced training set (4,804 images matching YOLOv8 distribution).")
     return parser.parse_args()
 
 
@@ -161,18 +163,38 @@ def main():
         sys.exit(f"[Error] Manifest not found at {SPLITS_CSV}. Run scripts/create_finetune_dataset_splits.py first.")
 
     mode_name = "Linear Probing (Frozen Backbone)" if args.freeze_backbone else "Full End-to-End Fine-Tuning"
-    mode_slug = "linear_probe" if args.freeze_backbone else "full_finetune"
+    base_slug = "linear_probe" if args.freeze_backbone else "full_finetune"
+    mode_slug = f"{base_slug}_d4" if args.use_d4 else base_slug
 
     save_dir = OUTPUT_DIR / f"mobilenet_{args.modality}_{mode_slug}"
     save_dir.mkdir(parents=True, exist_ok=True)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    df_master = pd.read_csv(SPLITS_CSV)
-    df = df_master[df_master["modality"] == args.modality].copy()
-
-    df_train = df[df["split"] == "train"]
-    df_val = df[df["split"] == "val"]
-    df_test = df[df["split"] == "test"]
+    if args.use_d4 and args.modality == "thick":
+        yolo_dir = ROOT / "data" / "splits" / "yolo_thick"
+        records = []
+        for s in ["train", "val", "test"]:
+            img_dir = yolo_dir / "images" / s
+            lbl_dir = yolo_dir / "labels" / s
+            for img_p in sorted(img_dir.glob("*.jpg")):
+                lbl_p = lbl_dir / f"{img_p.stem}.txt"
+                is_pos = lbl_p.exists() and len(lbl_p.read_text().strip()) > 0
+                records.append({
+                    "image_path": str(img_p),
+                    "label": 1 if is_pos else 0,
+                    "split": s,
+                    "modality": "thick"
+                })
+        df = pd.DataFrame(records)
+        df_train = df[df["split"] == "train"]
+        df_val = df[df["split"] == "val"]
+        df_test = df[df["split"] == "test"]
+    else:
+        df_master = pd.read_csv(SPLITS_CSV)
+        df = df_master[df_master["modality"] == args.modality].copy()
+        df_train = df[df["split"] == "train"]
+        df_val = df[df["split"] == "val"]
+        df_test = df[df["split"] == "test"]
 
     print("\n" + "=" * 65)
     print(f"WAM-Bench MobileNetV2 Fine-Tuning Pipeline [{args.modality.upper()} SMEARS]")
